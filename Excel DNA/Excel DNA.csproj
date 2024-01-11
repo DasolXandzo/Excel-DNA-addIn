@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0-windows</TargetFramework>
+	  <UseWindowsForms>true</UseWindowsForms>
+	  <RootNamespace>Excel_DNA</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+	  
+  </PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="ExcelDna.Addin" Version="1.7.0" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2210.55" />
+	</ItemGroup>
+
+</Project>
