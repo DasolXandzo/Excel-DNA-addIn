@@ -35,12 +35,12 @@
             // webView21
             // 
             this.webView21.AllowExternalDrop = true;
+            this.webView21.BackColor = System.Drawing.SystemColors.ButtonHighlight;
             this.webView21.CreationProperties = null;
             this.webView21.DefaultBackgroundColor = System.Drawing.Color.White;
-            this.webView21.Location = new System.Drawing.Point(0, 0);
+            this.webView21.Location = new System.Drawing.Point(2, -1);
             this.webView21.Name = "webView21";
-            this.webView21.Size = new System.Drawing.Size(800, 449);
-            this.webView21.Source = new System.Uri("https://metanit.com/sharp/uwp/4.12.php", System.UriKind.Absolute);
+            this.webView21.Size = new System.Drawing.Size(803, 451);
             this.webView21.TabIndex = 0;
             this.webView21.ZoomFactor = 1D;
             this.webView21.Click += new System.EventHandler(this.webView21_Click);
@@ -53,7 +53,6 @@
             this.Controls.Add(this.webView21);
             this.Name = "MyForm";
             this.Text = "MyForm";
-            this.Load += new System.EventHandler(this.MyForm_Load_1);
             ((System.ComponentModel.ISupportInitialize)(this.webView21)).EndInit();
             this.ResumeLayout(false);
 
@@ -61,6 +60,6 @@
 
         #endregion
 
-        public Microsoft.Web.WebView2.WinForms.WebView2 webView21;
+        private Microsoft.Web.WebView2.WinForms.WebView2 webView21;
     }
 }
