@@ -16,13 +16,13 @@ namespace Excel_DNA
 {
     public partial class MyForm : Form
     {
-        public MyForm()
+        public MyForm(string url)
         {
             InitializeComponent();
-            var test = InitAsync();
+            var test = InitAsync(url);
         }
 
-        private async Task InitAsync()
+        private async Task InitAsync(string url)
         {
             // Предполагается, что у вас есть экземпляр CoreWebView2Environment.
             // Если у вас нет webView, удостоверьтесь, что он объявлен и проинициализирован перед вызовом этого метода.
@@ -33,7 +33,7 @@ namespace Excel_DNA
 
             // Предполагается, что у вас есть экземпляр webView.
             await webView21.EnsureCoreWebView2Async(env);
-            webView21.CoreWebView2.Navigate("https://www.google.com/");
+            webView21.CoreWebView2.Navigate(url);
         }
 
         private void webView21_Click(object sender, EventArgs e)
