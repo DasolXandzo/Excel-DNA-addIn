@@ -61,7 +61,7 @@ namespace Excel_DNA
             //var res2 = excelApp.Evaluate("A1");
 
             ParseTreeNode node =  ExcelFormulaParser.Parse(range.Formula);
-            FormulaAnalyzer analyzer = new FormulaAnalyzer(range.Formula);
+            //FormulaAnalyzer analyzer = new FormulaAnalyzer(range.Formula);
             DepthFirstSearch(node, excelApp, 0);
             var leters = JsonSerializer.Serialize(res[0].Name);
             var json = JsonSerializer.Serialize(res);
