@@ -40,7 +40,7 @@
             this.webView21.DefaultBackgroundColor = System.Drawing.Color.White;
             this.webView21.Location = new System.Drawing.Point(2, -1);
             this.webView21.Name = "webView21";
-            this.webView21.Size = new System.Drawing.Size(803, 451);
+            this.webView21.Size = new System.Drawing.Size(1204, 616);
             this.webView21.TabIndex = 0;
             this.webView21.ZoomFactor = 1D;
             this.webView21.Click += new System.EventHandler(this.webView21_Click);
@@ -49,7 +49,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
+            this.ClientSize = new System.Drawing.Size(1204, 616);
             this.Controls.Add(this.webView21);
             this.Name = "MyForm";
             this.Text = "MyForm";
