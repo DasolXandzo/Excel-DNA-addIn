@@ -83,6 +83,7 @@ namespace Excel_DNA
 
 
             ParseTreeNode node =  ExcelFormulaParser.Parse(range.Formula);
+            //FormulaAnalyzer analyzer = new FormulaAnalyzer(range.Formula);
             DepthFirstSearch(node, excelApp, 0);
             res[0].Result = res[1].Result;
             var leters = JsonSerializer.Serialize(res[1].Name);
@@ -97,8 +98,16 @@ namespace Excel_DNA
             if(root.Term.Name == "CellToken")
             {
                 var name = root.Token.Text;
-                var result = RangeSet("=" + name);
-                res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result.Item2 });
+
+                CellSet(name, depth);
+                //res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result});
+                return;
+            }
+            if(root.Term.Name == "ReferenceFunctionCall" && root.ChildNodes.Count() == 3)
+            {
+                var name = root.Print();
+                res.Add(new Node { Name = name, Depth = depth.ToString(), Result = "<диапазон>" });
+                return;
             }
             if (root.IsFunction())
             {
@@ -122,10 +131,10 @@ namespace Excel_DNA
                 var name = root.Print();
                 var result = "range";
                 res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result });
-                foreach (var child in root.ChildNodes)
-                {
-                    DepthFirstSearch(child, application, depth + 1);
-                }
+                //foreach (var child in root.ChildNodes)
+                //{
+                //    DepthFirstSearch(child, application, depth + 1);
+                //}
                 return;
             }
             if (root.IsParentheses())
@@ -156,6 +165,30 @@ namespace Excel_DNA
             Microsoft.Office.Interop.Excel.Range range = excelApp.Range["K13"];
             return Tuple.Create(range.FormulaLocal.Substring(1), range.Value.ToString());
             var test = 5;
+        }
+
+        public static void CellSet(string cellName, int cellDepth)
+        {
+            Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
+            Microsoft.Office.Interop.Excel.Range range = excelApp.Range[cellName];
+            if (range.Value == null)
+            {
+                res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = "<пусто>" });
+                return;
+            }
+            else if (range.Value.GetType() == typeof(string))
+            {
+                res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = "<текст>" });
+                return;
+            }
+            res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = range.Value.ToString() });
+            string pattern = "^=([0-9A-Z&^:;(),/. *+-]*)?$";
+            Regex regex = new Regex(pattern);
+            if (range.Formula.GetType() == typeof(string) && regex.IsMatch(range.Formula))
+            {
+                res.Add(new Node { Name = range.Formula.ToString(), Depth = (cellDepth+1).ToString(), Result = range.Value.ToString() });
+            }
+            return;
         }
 
     }
