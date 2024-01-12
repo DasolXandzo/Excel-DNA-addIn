@@ -7,6 +7,7 @@ using Irony.Parsing;
 using System.Security.Policy;
 using System.Text.Json;
 using Microsoft.Office.Interop.Excel;
+using System.Xml.Linq;
 
 namespace Excel_DNA
 {
@@ -72,6 +73,12 @@ namespace Excel_DNA
         }
         public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth)
         {
+            if(root.Term.Name == "CellToken")
+            {
+                var name = root.Token.Text;
+                var result = RangeSet("=" + name);
+                res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result});
+            }
             if (root.IsFunction())
             {
                 root.Print();
