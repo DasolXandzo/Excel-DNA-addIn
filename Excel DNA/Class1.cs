@@ -32,6 +32,8 @@ namespace Excel_DNA
     public class MyFunctions: ExcelRibbon
     {
         static List<Node> res = new List<Node>();
+
+        public static Microsoft.Office.Interop.Excel.Application application1 = new Microsoft.Office.Interop.Excel.Application();
         public override string GetCustomUI(string RibbonID)
         {
             return @"
@@ -57,15 +59,33 @@ namespace Excel_DNA
         }
         public static void RangeGet()
         {
+            //application1.Visible = true;
             res.Clear();
-            Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application; 
+            Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
             Microsoft.Office.Interop.Excel.Range range = excelApp.ActiveCell;
-            //var res2 = excelApp.Evaluate("A1");
+            res.Add(new Node { Name = range.AddressLocal.Replace("$",""), Depth = "0" });
+
+            if(range.Formula == "" && range.Value == null && range.Text == "")
+            {
+                MessageBox.Show("Я ошибка природы");
+                return;
+            }
+
+            string lettersFormula = range.Formula; // Замените на вашу строку с формулой
+
+            //string pattern = @"([A-Z]\d+)\s*([<>]=?|!=)\s*([A-Z]\d+)\s*&\s*([A-Z]\d+)\s*([<>]=?|!=)\s*([A-Z]\d+)";
+            //Regex regex = new Regex(pattern);
+
+            //string transformedString = regex.Replace(lettersFormula, match =>
+            //{
+            //    return $"AND({match.Groups[1].Value}{match.Groups[2].Value}{match.Groups[3].Value}, {match.Groups[4].Value}{match.Groups[5].Value}{match.Groups[6].Value})";
+            //});
+
 
             ParseTreeNode node =  ExcelFormulaParser.Parse(range.Formula);
-            //FormulaAnalyzer analyzer = new FormulaAnalyzer(range.Formula);
             DepthFirstSearch(node, excelApp, 0);
-            var leters = JsonSerializer.Serialize(res[0].Name);
+            res[0].Result = res[1].Result;
+            var leters = JsonSerializer.Serialize(res[1].Name);
             var json = JsonSerializer.Serialize(res);
             var url = "http://localhost:3000/?dialogID=15&lettersFormula=" + leters + "&valuesFormula = " + leters + "&jsonString=" + json;
             MyForm form = new MyForm(url);
@@ -89,15 +109,13 @@ namespace Excel_DNA
             }
             if (root.IsFunction())
             {
-                root.Print();
                 FormulaAnalyzer analyzer = new FormulaAnalyzer(root);
                 var name = root.Print();
-                //var depth = analyzer.Depth().ToString();
-                //var wb = application.Workbooks.Add(Type.Missing);
-                //var ws = wb.Worksheets[1];
-                //application.Windows[1].Visible= false;
-                var result = RangeSet("="+name);
-                res.Add(new Node{ Name = name, Depth = depth.ToString(), Result = result});
+                application.Range["BBB1000"].Formula = name;
+                var range = application.Range["BBB1000"];
+                Tuple<string,string> result = RangeSet("=" + name);
+                name = result.Item1;
+                res.Add(new Node{ Name = name, Depth = depth.ToString(), Result = result.Item2 });
                 var stop = 5;
                 foreach (var child in root.ChildNodes)
                 {
@@ -109,7 +127,6 @@ namespace Excel_DNA
             {
                 FormulaAnalyzer analyzer = new FormulaAnalyzer(root);
                 var name = root.Print();
-               // var depth = analyzer.Depth().ToString();
                 var result = "range";
                 res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result });
                 //foreach (var child in root.ChildNodes)
@@ -124,7 +141,7 @@ namespace Excel_DNA
                 var name = root.Print();
               //  var depth = analyzer.Depth().ToString();
                 var result = RangeSet("=" + name);
-                res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result });
+                res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result.Item2 });
                 foreach (var child in root.ChildNodes)
                 {
                     DepthFirstSearch(child, application, depth + 1);
@@ -139,12 +156,12 @@ namespace Excel_DNA
             }
         }
 
-        public static string RangeSet(string formula)
+        public static Tuple<string,string> RangeSet(string formula)
         {
             Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
             excelApp.Range["K13"].Formula = formula;
             Microsoft.Office.Interop.Excel.Range range = excelApp.Range["K13"];
-            return range.Value.ToString();
+            return Tuple.Create(range.FormulaLocal.Substring(1), range.Value.ToString());
             var test = 5;
         }
 
