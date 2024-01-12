@@ -8,6 +8,7 @@ using System.Security.Policy;
 using System.Text.Json;
 using Microsoft.Office.Interop.Excel;
 using System.Xml.Linq;
+using System.Text.RegularExpressions;
 
 namespace Excel_DNA
 {
@@ -76,8 +77,15 @@ namespace Excel_DNA
             if(root.Term.Name == "CellToken")
             {
                 var name = root.Token.Text;
-                var result = RangeSet("=" + name);
-                res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result});
+                CellSet(name, depth);
+                //res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result});
+                return;
+            }
+            if(root.Term.Name == "ReferenceFunctionCall" && root.ChildNodes.Count() == 3)
+            {
+                var name = root.Print();
+                res.Add(new Node { Name = name, Depth = depth.ToString(), Result = "<диапазон>" });
+                return;
             }
             if (root.IsFunction())
             {
@@ -104,10 +112,10 @@ namespace Excel_DNA
                // var depth = analyzer.Depth().ToString();
                 var result = "range";
                 res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result });
-                foreach (var child in root.ChildNodes)
-                {
-                    DepthFirstSearch(child, application, depth + 1);
-                }
+                //foreach (var child in root.ChildNodes)
+                //{
+                //    DepthFirstSearch(child, application, depth + 1);
+                //}
                 return;
             }
             if (root.IsParentheses())
@@ -138,6 +146,30 @@ namespace Excel_DNA
             Microsoft.Office.Interop.Excel.Range range = excelApp.Range["K13"];
             return range.Value.ToString();
             var test = 5;
+        }
+
+        public static void CellSet(string cellName, int cellDepth)
+        {
+            Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
+            Microsoft.Office.Interop.Excel.Range range = excelApp.Range[cellName];
+            if (range.Value == null)
+            {
+                res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = "<пусто>" });
+                return;
+            }
+            else if (range.Value.GetType() == typeof(string))
+            {
+                res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = "<текст>" });
+                return;
+            }
+            res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = range.Value.ToString() });
+            string pattern = "^=([0-9A-Z&^:;(),/. *+-]*)?$";
+            Regex regex = new Regex(pattern);
+            if (range.Formula.GetType() == typeof(string) && regex.IsMatch(range.Formula))
+            {
+                res.Add(new Node { Name = range.Formula.ToString(), Depth = (cellDepth+1).ToString(), Result = range.Value.ToString() });
+            }
+            return;
         }
 
     }
