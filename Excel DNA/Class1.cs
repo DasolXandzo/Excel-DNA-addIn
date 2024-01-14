@@ -64,14 +64,50 @@ namespace Excel_DNA
             Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
             Microsoft.Office.Interop.Excel.Range range = excelApp.ActiveCell;
             res.Add(new Node { Name = range.AddressLocal.Replace("$",""), Depth = "0" });
+            string lettersFormula = range.Formula; // Замените на вашу строку с формулой
 
-            if(range.Formula == "" && range.Value == null && range.Text == "")
+            //var valueTest = range.Formula[0];
+            //var stop5 = 5;
+            string valuesFormulaPattern = @"^=-*\d+(\.\d+)?$"; //@"^=-(\d+\.\d+|\d+)$";
+
+            // пустая ячейка
+            if (range.Formula == "" && range.Value == null && range.Text == "")
             {
-                MessageBox.Show("Я ошибка природы");
+                MessageBox.Show("Ячейка не может быть пустой или содержать текст.");
                 return;
             }
+            else if (range.Formula[0] != '=')
+            {
+                // ячейка с числом
+                if (range.Value.GetType() == typeof(int) || range.Value.GetType() == typeof(float) || range.Value.GetType() == typeof(double))
+                {
+                    res[0].Result = range.Text;
+                    var earlyJson = JsonSerializer.Serialize(res);
+                    var earlyUrl = "http://localhost:3000/?dialogID=15&lettersFormula=" + lettersFormula + "&valuesFormula = " + lettersFormula + "&jsonString=" + earlyJson;
+                    MyForm earlyForm = new MyForm(earlyUrl);
+                    earlyForm.Show();
+                    return;
+                }
+                // ячейка с текстом, без "=" в начале
+                else if (range.Value.GetType() == typeof(string))
+                {
+                    MessageBox.Show("Ячейка не может быть пустой или содержать текст.");
+                    return;
+                }
+            }
+            // ячейка с формулой формата "=число"
+            else if (Regex.IsMatch(range.Formula, valuesFormulaPattern))
+            {
+                res[0].Result = range.Text;
+                res.Add(new Node { Name = range.Text, Result = range.Text, Depth = "1" });
+                var earlyJson = JsonSerializer.Serialize(res);
+                var earlyUrl = "http://localhost:3000/?dialogID=15&lettersFormula=" + lettersFormula + "&valuesFormula = " + lettersFormula + "&jsonString=" + earlyJson;
+                MyForm earlyForm = new MyForm(earlyUrl);
+                earlyForm.Show();
+                return;
+            }
+            // ТУТ ДОЛЖНА БЫТЬ ПРОВЕРКА НА ЗНАЧЕНИЕ ЯЧЕЙКИ ФОРМАТА "=текст"
 
-            string lettersFormula = range.Formula; // Замените на вашу строку с формулой
 
             //string pattern = @"([A-Z]\d+)\s*([<>]=?|!=)\s*([A-Z]\d+)\s*&\s*([A-Z]\d+)\s*([<>]=?|!=)\s*([A-Z]\d+)";
             //Regex regex = new Regex(pattern);
@@ -83,11 +119,10 @@ namespace Excel_DNA
 
 
             ParseTreeNode node =  ExcelFormulaParser.Parse(range.Formula);
-            DepthFirstSearch(node, excelApp, 0);
+            DepthFirstSearch(node, excelApp, 1);
             res[0].Result = res[1].Result;
-            var leters = JsonSerializer.Serialize(res[1].Name);
             var json = JsonSerializer.Serialize(res);
-            var url = "http://localhost:3000/?dialogID=15&lettersFormula=" + leters + "&valuesFormula = " + leters + "&jsonString=" + json;
+            var url = "http://localhost:3000/?dialogID=15&lettersFormula=" + lettersFormula + "&valuesFormula = " + lettersFormula + "&jsonString=" + json;
             MyForm form = new MyForm(url);
             form.Show();
 
@@ -161,8 +196,8 @@ namespace Excel_DNA
             Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
             excelApp.Range["K13"].Formula = formula;
             Microsoft.Office.Interop.Excel.Range range = excelApp.Range["K13"];
-            return Tuple.Create(range.FormulaLocal.Substring(1), range.Value.ToString());
-            var test = 5;
+            return Tuple.Create(range.FormulaLocal.Substring(1), range.Text);
+            //var test = 5;
         }
 
         public static void CellSet(string cellName, int cellDepth)
@@ -179,12 +214,12 @@ namespace Excel_DNA
                 res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = "<текст>" });
                 return;
             }
-            res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = range.Value.ToString() });
-            string pattern = "^=([0-9A-Z&^:;(),/. *+-]*)?$";
+            res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = range.Text });
+            string pattern = "^=[A-Z]+\\d*$"; //"^=([0-9A-Z&^:;(),/. *+-]*)?$";
             Regex regex = new Regex(pattern);
             if (range.Formula.GetType() == typeof(string) && regex.IsMatch(range.Formula))
             {
-                res.Add(new Node { Name = range.Formula.ToString(), Depth = (cellDepth+1).ToString(), Result = range.Value.ToString() });
+                res.Add(new Node { Name = range.Formula.ToString(), Depth = (cellDepth+1).ToString(), Result = range.Text });
             }
             return;
         }
