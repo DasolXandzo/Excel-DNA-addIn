@@ -63,12 +63,14 @@ namespace Excel_DNA
             res.Clear();
             Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
             Microsoft.Office.Interop.Excel.Range range = excelApp.ActiveCell;
-            res.Add(new Node { Name = range.AddressLocal.Replace("$",""), Depth = "0" });
-            string lettersFormula = range.Formula; // Замените на вашу строку с формулой
+            res.Add(new Node { Name = range.AddressLocal.Replace("$",""), Result = range.Text.Replace("#", "@"), Depth = "0" });
+            string lettersFormula = range.FormulaLocal; // Замените на вашу строку с формулой
 
-            //var valueTest = range.Formula[0];
-            //var stop5 = 5;
+            var valueTest = range.Value;
+            var stop5 = 5;
             string valuesFormulaPattern = @"^=-*\d+(\.\d+)?$"; //@"^=-(\d+\.\d+|\d+)$";
+            string stringValuePattern = @"^=""[^""]*""$";
+            string allSymbolsPattern = @"^=[^\d]*[a-z]+[^\d]*$";
 
             // пустая ячейка
             if (range.Formula == "" && range.Value == null && range.Text == "")
@@ -81,7 +83,7 @@ namespace Excel_DNA
                 // ячейка с числом
                 if (range.Value.GetType() == typeof(int) || range.Value.GetType() == typeof(float) || range.Value.GetType() == typeof(double))
                 {
-                    res[0].Result = range.Text;
+                    //res[0].Result = range.Text;
                     var earlyJson = JsonSerializer.Serialize(res);
                     var earlyUrl = "http://localhost:3000/?dialogID=15&lettersFormula=" + lettersFormula + "&valuesFormula = " + lettersFormula + "&jsonString=" + earlyJson;
                     MyForm earlyForm = new MyForm(earlyUrl);
@@ -98,7 +100,7 @@ namespace Excel_DNA
             // ячейка с формулой формата "=число"
             else if (Regex.IsMatch(range.Formula, valuesFormulaPattern))
             {
-                res[0].Result = range.Text;
+                //res[0].Result = range.Text;
                 res.Add(new Node { Name = range.Text, Result = range.Text, Depth = "1" });
                 var earlyJson = JsonSerializer.Serialize(res);
                 var earlyUrl = "http://localhost:3000/?dialogID=15&lettersFormula=" + lettersFormula + "&valuesFormula = " + lettersFormula + "&jsonString=" + earlyJson;
@@ -106,7 +108,16 @@ namespace Excel_DNA
                 earlyForm.Show();
                 return;
             }
-            // ТУТ ДОЛЖНА БЫТЬ ПРОВЕРКА НА ЗНАЧЕНИЕ ЯЧЕЙКИ ФОРМАТА "=текст"
+            // ТУТ ДОЛЖНА БЫТЬ ПРОВЕРКА НА ЗНАЧЕНИЕ ЯЧЕЙКИ ФОРМАТА =text, ="text"  (ну или обработка ошибки #ИМЯ?)
+            else if (Regex.IsMatch(range.Formula, allSymbolsPattern) || Regex.IsMatch(range.Formula, stringValuePattern))
+            {
+                res.Add(new Node { Name = range.FormulaLocal.Substring(1), Result = range.Text.Replace("#", "@"), Depth = "1" });
+                var earlyJson = JsonSerializer.Serialize(res);
+                var earlyUrl = "http://localhost:3000/?dialogID=15&lettersFormula=" + lettersFormula + "&valuesFormula = " + lettersFormula + "&jsonString=" + earlyJson;
+                MyForm earlyForm = new MyForm(earlyUrl);
+                earlyForm.Show();
+                return;
+            }
 
 
             //string pattern = @"([A-Z]\d+)\s*([<>]=?|!=)\s*([A-Z]\d+)\s*&\s*([A-Z]\d+)\s*([<>]=?|!=)\s*([A-Z]\d+)";
@@ -120,7 +131,7 @@ namespace Excel_DNA
 
             ParseTreeNode node =  ExcelFormulaParser.Parse(range.Formula);
             DepthFirstSearch(node, excelApp, 1);
-            res[0].Result = res[1].Result;
+            //res[0].Result = res[1].Result;
             var json = JsonSerializer.Serialize(res);
             var url = "http://localhost:3000/?dialogID=15&lettersFormula=" + lettersFormula + "&valuesFormula = " + lettersFormula + "&jsonString=" + json;
             MyForm form = new MyForm(url);
@@ -146,8 +157,14 @@ namespace Excel_DNA
             {
                 FormulaAnalyzer analyzer = new FormulaAnalyzer(root);
                 var name = root.Print();
-                application.Range["BBB1000"].Formula = name;
+
+                application.Range["BBB1000"].Formula = "=" + name;
                 var range = application.Range["BBB1000"];
+                var rangeValue = range.Value;
+                var rangeFormula = range.Formula;
+                var rangeText = range.Text;
+                var test = 5;
+
                 Tuple<string,string> result = RangeSet("=" + name);
                 name = result.Item1;
                 res.Add(new Node{ Name = name, Depth = depth.ToString(), Result = result.Item2 });
@@ -194,9 +211,9 @@ namespace Excel_DNA
         public static Tuple<string,string> RangeSet(string formula)
         {
             Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
-            excelApp.Range["K13"].Formula = formula;
-            Microsoft.Office.Interop.Excel.Range range = excelApp.Range["K13"];
-            return Tuple.Create(range.FormulaLocal.Substring(1), range.Text);
+            excelApp.Range["BBB1000"].Formula = formula;
+            Microsoft.Office.Interop.Excel.Range range = excelApp.Range["BBB1000"];
+            return Tuple.Create(range.FormulaLocal.Substring(1), range.Text.Replace("#", "@"));
             //var test = 5;
         }
 
@@ -214,13 +231,13 @@ namespace Excel_DNA
                 res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = "<текст>" });
                 return;
             }
-            res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = range.Text });
-            string pattern = "^=[A-Z]+\\d*$"; //"^=([0-9A-Z&^:;(),/. *+-]*)?$";
-            Regex regex = new Regex(pattern);
-            if (range.Formula.GetType() == typeof(string) && regex.IsMatch(range.Formula))
-            {
-                res.Add(new Node { Name = range.Formula.ToString(), Depth = (cellDepth+1).ToString(), Result = range.Text });
-            }
+            res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = range.Text.Replace("#", "@") });
+            //string pattern = "^=[A-Z]+\\d*$"; //"^=([0-9A-Z&^:;(),/. *+-]*)?$";
+            //Regex regex = new Regex(pattern);
+            //if (range.Formula.GetType() == typeof(string) && regex.IsMatch(range.Formula))
+            //{
+            //    res.Add(new Node { Name = range.Formula.ToString(), Depth = (cellDepth+1).ToString(), Result = range.Text.Replace("#", "@") });
+            //}
             return;
         }
 
