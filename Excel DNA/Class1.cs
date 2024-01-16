@@ -37,20 +37,50 @@ namespace Excel_DNA
         public override string GetCustomUI(string RibbonID)
         {
             return @"
-      <customUI xmlns='http://schemas.microsoft.com/office/2006/01/customui'>
-      <ribbon>
-        <tabs>
-          <tab id='tab1' label='Дерево'>
-            <group id='group1' label='Надстройка'>
-              <button id='button1' label='Создать дерево' onAction='OnButtonPressed'/>
-            </group >
-          </tab>
-        </tabs>
-      </ribbon>
-    </customUI>";
+            <customUI xmlns='http://schemas.microsoft.com/office/2006/01/customui'>
+              <ribbon>
+                <tabs>
+                  <tab id='tab1' label='Darkcell'>
+                    <group id='treeGroup' label='Formula tree'>
+                      <button id='createTreeButton' label='Create tree' onAction='createTreeButtonPressed'/>
+                    </group >
+                    <group id='moreGroup' label='More'>
+                      <button id='settingsButton' label='Settings' onAction='settingsButtonPressed'/>
+                      <button id='errorFormButton' label='Send error form' onAction='errorFormButtonPressed'/>
+                      <button id='helpButton' label='Help' onAction='helpButtonPressed'/>
+                      <button id='aboutButton' label='About us' onAction='aboutButtonPressed'/>
+                    </group >
+                  </tab>
+                </tabs>
+              </ribbon>
+            </customUI>";
         }
-
-        public void OnButtonPressed(IRibbonControl control)
+        public void settingsButtonPressed(IRibbonControl control)
+        {
+            MessageBox.Show("Раздел временно неактивен.");
+        }
+        public void errorFormButtonPressed(IRibbonControl control)
+        {
+            var url = "http://localhost:3000/?windowType=errorFormPage";
+            MyForm errorForm = new MyForm(url);
+            errorForm.Show();
+        }
+        public void helpButtonPressed(IRibbonControl control)
+        {
+            MessageBox.Show("Руководство по надстройке Darkcell:\n\n" +
+                "Раздел 'Formula tree'\n" +
+                "1) Create tree - представляет формулу, лежащую в выбранной ячейке в виде таблицы.\n\n" +
+                "Раздел 'More'\n" +
+                "1) Settings - открывает панель настроек.\n" +
+                "2) Send error form - открывает страницу с формой, для сообщения об обнаруженных ошибках.\n" +
+                "3) Help - открывает окно с кратким описанием интерфейса надстройки и её функционала.\n" +
+                "4) About us - открывает страницу с подробной информацией о нашем расширении.");
+        }
+        public void aboutButtonPressed(IRibbonControl control)
+        {
+            MessageBox.Show("Раздел временно неактивен.");
+        }
+        public void createTreeButtonPressed(IRibbonControl control)
         {
             //var url = "https://test-excel.vercel.app/?dialogID=15&lettersFormula=" + res
             //MyForm form = new MyForm();
@@ -63,15 +93,62 @@ namespace Excel_DNA
             res.Clear();
             Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
             Microsoft.Office.Interop.Excel.Range range = excelApp.ActiveCell;
-            res.Add(new Node { Name = range.AddressLocal.Replace("$",""), Depth = "0" });
+            res.Add(new Node { Name = range.AddressLocal.Replace("$",""), Result = range.Text.Replace("#", "@"), Depth = "0" });
+            string lettersFormula = range.FormulaLocal; // Замените на вашу строку с формулой
 
-            if(range.Formula == "" && range.Value == null && range.Text == "")
+            //var valueTest = range.Value;
+            //var stop5 = 5;
+            string valuesFormulaPattern = @"^=-*\d+(\.\d+)?$"; //@"^=-(\d+\.\d+|\d+)$";
+            string stringValuePattern = @"^=""[^""]*""$";
+            string allSymbolsPattern = @"^=[^\d]*[a-z]+[^\d]*$";
+
+            // пустая ячейка
+            if (range.Formula == "" && range.Value == null && range.Text == "")
             {
-                MessageBox.Show("Я ошибка природы");
+                MessageBox.Show("Ячейка не может быть пустой.");
+                return;
+            }
+            else if (range.Formula[0] != '=')
+            {
+                // ячейка с числом
+                if (range.Value.GetType() == typeof(int) || range.Value.GetType() == typeof(float) || range.Value.GetType() == typeof(double))
+                {
+                    //res[0].Result = range.Text;
+                    var earlyJson = JsonSerializer.Serialize(res);
+                    var earlyUrl = "http://localhost:3000/?windowType=treePage&jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
+                    MyForm earlyTreeForm = new MyForm(earlyUrl);
+                    earlyTreeForm.Show();
+                    return;
+                }
+                // ячейка с текстом, без "=" в начале
+                else if (range.Value.GetType() == typeof(string))
+                {
+                    MessageBox.Show("Ячейка не может быть пустой или содержать текст.");
+                    return;
+                }
+            }
+            // ячейка с формулой формата "=число"
+            else if (Regex.IsMatch(range.Formula, valuesFormulaPattern))
+            {
+                //res[0].Result = range.Text;
+                res.Add(new Node { Name = range.Text, Result = range.Text, Depth = "1" });
+                var earlyJson = JsonSerializer.Serialize(res);
+                var earlyUrl = "http://localhost:3000/?windowType=treePage&jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
+                MyForm earlyTreeForm = new MyForm(earlyUrl);
+                earlyTreeForm.Show();
+                return;
+            }
+            // ТУТ ДОЛЖНА БЫТЬ ПРОВЕРКА НА ЗНАЧЕНИЕ ЯЧЕЙКИ ФОРМАТА =text, ="text"  (ну или обработка ошибки #ИМЯ?)
+            else if (Regex.IsMatch(range.Formula, allSymbolsPattern) || Regex.IsMatch(range.Formula, stringValuePattern))
+            {
+                res.Add(new Node { Name = range.FormulaLocal.Substring(1), Result = range.Text.Replace("#", "@"), Depth = "1" });
+                var earlyJson = JsonSerializer.Serialize(res);
+                var earlyUrl = "http://localhost:3000/?windowType=treePage&jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
+                MyForm earlyTreeForm = new MyForm(earlyUrl);
+                earlyTreeForm.Show();
                 return;
             }
 
-            string lettersFormula = range.Formula; // Замените на вашу строку с формулой
 
             //string pattern = @"([A-Z]\d+)\s*([<>]=?|!=)\s*([A-Z]\d+)\s*&\s*([A-Z]\d+)\s*([<>]=?|!=)\s*([A-Z]\d+)";
             //Regex regex = new Regex(pattern);
@@ -83,14 +160,12 @@ namespace Excel_DNA
 
 
             ParseTreeNode node =  ExcelFormulaParser.Parse(range.Formula);
-            //FormulaAnalyzer analyzer = new FormulaAnalyzer(range.Formula);
-            DepthFirstSearch(node, excelApp, 0);
-            res[0].Result = res[1].Result;
-            var leters = JsonSerializer.Serialize(res[1].Name);
+            DepthFirstSearch(node, excelApp, 1);
+            //res[0].Result = res[1].Result;
             var json = JsonSerializer.Serialize(res);
-            var url = "http://localhost:3000/?dialogID=15&lettersFormula=" + leters + "&valuesFormula = " + leters + "&jsonString=" + json;
-            MyForm form = new MyForm(url);
-            form.Show();
+            var url = "http://localhost:3000/?windowType=treePage&jsonString=" + json + "&lettersFormula" + lettersFormula;
+            MyForm treeForm = new MyForm(url);
+            treeForm.Show();
 
         }
         public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth)
@@ -98,7 +173,6 @@ namespace Excel_DNA
             if(root.Term.Name == "CellToken")
             {
                 var name = root.Token.Text;
-
                 CellSet(name, depth);
                 //res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result});
                 return;
@@ -113,8 +187,14 @@ namespace Excel_DNA
             {
                 FormulaAnalyzer analyzer = new FormulaAnalyzer(root);
                 var name = root.Print();
-                application.Range["BBB1000"].Formula = name;
-                var range = application.Range["BBB1000"];
+
+                //application.Range["BBB1000"].Formula = "=" + name;
+                //var range = application.Range["BBB1000"];
+                //var rangeValue = range.Value;
+                //var rangeFormula = range.Formula;
+                //var rangeText = range.Text;
+                //var test = 5;
+
                 Tuple<string,string> result = RangeSet("=" + name);
                 name = result.Item1;
                 res.Add(new Node{ Name = name, Depth = depth.ToString(), Result = result.Item2 });
@@ -161,10 +241,10 @@ namespace Excel_DNA
         public static Tuple<string,string> RangeSet(string formula)
         {
             Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
-            excelApp.Range["K13"].Formula = formula;
-            Microsoft.Office.Interop.Excel.Range range = excelApp.Range["K13"];
-            return Tuple.Create(range.FormulaLocal.Substring(1), range.Value.ToString());
-            var test = 5;
+            excelApp.Range["BBB1000"].Formula = formula;
+            Microsoft.Office.Interop.Excel.Range range = excelApp.Range["BBB1000"];
+            return Tuple.Create(range.FormulaLocal.Substring(1), range.Text.Replace("#", "@"));
+            //var test = 5;
         }
 
         public static void CellSet(string cellName, int cellDepth)
@@ -178,16 +258,16 @@ namespace Excel_DNA
             }
             else if (range.Value.GetType() == typeof(string))
             {
-                res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = "<текст>" });
+                res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = range.Text });
                 return;
             }
-            res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = range.Value.ToString() });
-            string pattern = "^=([0-9A-Z&^:;(),/. *+-]*)?$";
-            Regex regex = new Regex(pattern);
-            if (range.Formula.GetType() == typeof(string) && regex.IsMatch(range.Formula))
-            {
-                res.Add(new Node { Name = range.Formula.ToString(), Depth = (cellDepth+1).ToString(), Result = range.Value.ToString() });
-            }
+            res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = range.Text.Replace("#", "@") });
+            //string pattern = "^=[A-Z]+\\d*$"; //"^=([0-9A-Z&^:;(),/. *+-]*)?$";
+            //Regex regex = new Regex(pattern);
+            //if (range.Formula.GetType() == typeof(string) && regex.IsMatch(range.Formula))
+            //{
+            //    res.Add(new Node { Name = range.Formula.ToString(), Depth = (cellDepth+1).ToString(), Result = range.Text.Replace("#", "@") });
+            //}
             return;
         }
 
