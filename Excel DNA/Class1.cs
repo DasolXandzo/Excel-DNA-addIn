@@ -9,6 +9,7 @@ using System.Text.Json;
 using Microsoft.Office.Interop.Excel;
 using System.Xml.Linq;
 using System.Text.RegularExpressions;
+using ExcelDna.Integration;
 
 namespace Excel_DNA
 {
@@ -25,7 +26,6 @@ namespace Excel_DNA
         public ParseTreeNode? Node { get; set; }
         public int? Depth { set; get; }
     }
-
 
 
     [ComVisible(true)]
@@ -65,15 +65,30 @@ namespace Excel_DNA
             MyForm errorForm = new MyForm(url);
             errorForm.Show();
         }
+
+        // ShortCut for call tree creator
+        [ExcelCommand(ShortCut = "^H")]
+        public static void CallShortCutHelp()
+        {
+            MessageBox.Show("Руководство по надстройке Darkcell:\n\n" +
+                "Раздел 'Formula tree'\n" +
+                "1) Create tree - представляет формулу, лежащую в выбранной ячейке в виде таблицы. (Ctrl+Shift+Q)\n\n" +
+                "Раздел 'More'\n" +
+                "1) Settings - открывает панель настроек.\n" +
+                "2) Send error form - открывает страницу с формой, для сообщения об обнаруженных ошибках.\n" +
+                "3) Help - открывает окно с кратким описанием интерфейса надстройки и её функционала. (Ctrl+Shift+H)\n" +
+                "4) About us - открывает страницу с подробной информацией о нашем расширении.");
+        }
+
         public void helpButtonPressed(IRibbonControl control)
         {
             MessageBox.Show("Руководство по надстройке Darkcell:\n\n" +
                 "Раздел 'Formula tree'\n" +
-                "1) Create tree - представляет формулу, лежащую в выбранной ячейке в виде таблицы.\n\n" +
+                "1) Create tree - представляет формулу, лежащую в выбранной ячейке в виде таблицы. (Ctrl+Shift+Q)\n\n" +
                 "Раздел 'More'\n" +
                 "1) Settings - открывает панель настроек.\n" +
                 "2) Send error form - открывает страницу с формой, для сообщения об обнаруженных ошибках.\n" +
-                "3) Help - открывает окно с кратким описанием интерфейса надстройки и её функционала.\n" +
+                "3) Help - открывает окно с кратким описанием интерфейса надстройки и её функционала. (Ctrl+Shift+H)\n" +
                 "4) About us - открывает страницу с подробной информацией о нашем расширении.");
         }
         public void aboutButtonPressed(IRibbonControl control)
@@ -87,6 +102,14 @@ namespace Excel_DNA
             //form.Show();
             RangeGet();
         }
+
+        // ShortCut for call tree creator
+        [ExcelCommand(ShortCut = "^Q")]
+        public static void CallShortCutTree()
+        {
+            RangeGet();
+        }
+
         public static void RangeGet()
         {
             //application1.Visible = true;
