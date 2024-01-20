@@ -9,6 +9,7 @@ using System.Text.Json;
 using Microsoft.Office.Interop.Excel;
 using System.Xml.Linq;
 using System.Text.RegularExpressions;
+using ExcelDna.Integration;
 
 namespace Excel_DNA
 {
@@ -25,7 +26,6 @@ namespace Excel_DNA
         public ParseTreeNode? Node { get; set; }
         public int? Depth { set; get; }
     }
-
 
 
     [ComVisible(true)]
@@ -59,21 +59,37 @@ namespace Excel_DNA
         {
             MessageBox.Show("Раздел временно неактивен.");
         }
+
         public void errorFormButtonPressed(IRibbonControl control)
         {
-            var url = "http://localhost:3000/?windowType=errorFormPage";
+            var url = "http://localhost:3000/ErrorFormPage";
             MyForm errorForm = new MyForm(url);
             errorForm.Show();
         }
+
+        // ShortCut for call help window
+        [ExcelCommand(ShortCut = "^H")]
+        public static void CallShortCutHelp()
+        {
+            MessageBox.Show("Руководство по надстройке Darkcell:\n\n" +
+                "Раздел 'Formula tree'\n" +
+                "1) Create tree - представляет формулу, лежащую в выбранной ячейке в виде таблицы. (Ctrl+Shift+Q)\n\n" +
+                "Раздел 'More'\n" +
+                "1) Settings - открывает панель настроек.\n" +
+                "2) Send error form - открывает страницу с формой, для сообщения об обнаруженных ошибках.\n" +
+                "3) Help - открывает окно с кратким описанием интерфейса надстройки и её функционала. (Ctrl+Shift+H)\n" +
+                "4) About us - открывает страницу с подробной информацией о нашем расширении.");
+        }
+
         public void helpButtonPressed(IRibbonControl control)
         {
             MessageBox.Show("Руководство по надстройке Darkcell:\n\n" +
                 "Раздел 'Formula tree'\n" +
-                "1) Create tree - представляет формулу, лежащую в выбранной ячейке в виде таблицы.\n\n" +
+                "1) Create tree - представляет формулу, лежащую в выбранной ячейке в виде таблицы. (Ctrl+Shift+Q)\n\n" +
                 "Раздел 'More'\n" +
                 "1) Settings - открывает панель настроек.\n" +
                 "2) Send error form - открывает страницу с формой, для сообщения об обнаруженных ошибках.\n" +
-                "3) Help - открывает окно с кратким описанием интерфейса надстройки и её функционала.\n" +
+                "3) Help - открывает окно с кратким описанием интерфейса надстройки и её функционала. (Ctrl+Shift+H)\n" +
                 "4) About us - открывает страницу с подробной информацией о нашем расширении.");
         }
         public void aboutButtonPressed(IRibbonControl control)
@@ -82,11 +98,16 @@ namespace Excel_DNA
         }
         public void createTreeButtonPressed(IRibbonControl control)
         {
-            //var url = "https://test-excel.vercel.app/?dialogID=15&lettersFormula=" + res
-            //MyForm form = new MyForm();
-            //form.Show();
             RangeGet();
         }
+
+        // ShortCut for call tree creator
+        [ExcelCommand(ShortCut = "^Q")]
+        public static void CallShortCutTree()
+        {
+            RangeGet();
+        }
+
         public static void RangeGet()
         {
             //application1.Visible = true;
@@ -94,7 +115,7 @@ namespace Excel_DNA
             Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
             Microsoft.Office.Interop.Excel.Range range = excelApp.ActiveCell;
             res.Add(new Node { Name = range.AddressLocal.Replace("$",""), Result = range.Text.Replace("#", "@"), Depth = "0" });
-            string lettersFormula = range.FormulaLocal; // Замените на вашу строку с формулой
+            string lettersFormula = range.FormulaLocal.Replace(" ", ""); // Замените на вашу строку с формулой
 
             //var valueTest = range.Value;
             //var stop5 = 5;
@@ -113,9 +134,10 @@ namespace Excel_DNA
                 // ячейка с числом
                 if (range.Value.GetType() == typeof(int) || range.Value.GetType() == typeof(float) || range.Value.GetType() == typeof(double))
                 {
+                    range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
                     //res[0].Result = range.Text;
                     var earlyJson = JsonSerializer.Serialize(res);
-                    var earlyUrl = "http://localhost:3000/?windowType=treePage&jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
+                    var earlyUrl = "http://localhost:3000/CreateTreePage/?jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
                     MyForm earlyTreeForm = new MyForm(earlyUrl);
                     earlyTreeForm.Show();
                     return;
@@ -123,17 +145,18 @@ namespace Excel_DNA
                 // ячейка с текстом, без "=" в начале
                 else if (range.Value.GetType() == typeof(string))
                 {
-                    MessageBox.Show("Ячейка не может быть пустой или содержать текст.");
+                    MessageBox.Show("Ячейка не может содержать текст.");
                     return;
                 }
             }
             // ячейка с формулой формата "=число"
             else if (Regex.IsMatch(range.Formula, valuesFormulaPattern))
             {
+                range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
                 //res[0].Result = range.Text;
                 res.Add(new Node { Name = range.Text, Result = range.Text, Depth = "1" });
                 var earlyJson = JsonSerializer.Serialize(res);
-                var earlyUrl = "http://localhost:3000/?windowType=treePage&jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
+                var earlyUrl = "http://localhost:3000/CreateTreePage/?jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
                 MyForm earlyTreeForm = new MyForm(earlyUrl);
                 earlyTreeForm.Show();
                 return;
@@ -141,14 +164,16 @@ namespace Excel_DNA
             // ТУТ ДОЛЖНА БЫТЬ ПРОВЕРКА НА ЗНАЧЕНИЕ ЯЧЕЙКИ ФОРМАТА =text, ="text"  (ну или обработка ошибки #ИМЯ?)
             else if (Regex.IsMatch(range.Formula, allSymbolsPattern) || Regex.IsMatch(range.Formula, stringValuePattern))
             {
+                range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
                 res.Add(new Node { Name = range.FormulaLocal.Substring(1), Result = range.Text.Replace("#", "@"), Depth = "1" });
                 var earlyJson = JsonSerializer.Serialize(res);
-                var earlyUrl = "http://localhost:3000/?windowType=treePage&jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
+                var earlyUrl = "http://localhost:3000/CreateTreePage/?jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
                 MyForm earlyTreeForm = new MyForm(earlyUrl);
                 earlyTreeForm.Show();
                 return;
             }
 
+            range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
 
             //string pattern = @"([A-Z]\d+)\s*([<>]=?|!=)\s*([A-Z]\d+)\s*&\s*([A-Z]\d+)\s*([<>]=?|!=)\s*([A-Z]\d+)";
             //Regex regex = new Regex(pattern);
@@ -161,9 +186,8 @@ namespace Excel_DNA
 
             ParseTreeNode node =  ExcelFormulaParser.Parse(range.Formula);
             DepthFirstSearch(node, excelApp, 1);
-            //res[0].Result = res[1].Result;
             var json = JsonSerializer.Serialize(res);
-            var url = "http://localhost:3000/?windowType=treePage&jsonString=" + json + "&lettersFormula" + lettersFormula;
+            var url = "http://localhost:3000/CreateTreePage/?jsonString=" + json + "&lettersFormula" + lettersFormula;
             MyForm treeForm = new MyForm(url);
             treeForm.Show();
 
@@ -221,7 +245,7 @@ namespace Excel_DNA
             {
                 FormulaAnalyzer analyzer = new FormulaAnalyzer(root);
                 var name = root.Print();
-              //  var depth = analyzer.Depth().ToString();
+                //var depth = analyzer.Depth().ToString();
                 var result = RangeSet("=" + name);
                 res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result.Item2 });
                 foreach (var child in root.ChildNodes)
