@@ -28,33 +28,36 @@
         /// </summary>
         private void InitializeComponent()
         {
-            webView21 = new Microsoft.Web.WebView2.WinForms.WebView2();
-            ((System.ComponentModel.ISupportInitialize)webView21).BeginInit();
-            SuspendLayout();
+            this.webView21 = new Microsoft.Web.WebView2.WinForms.WebView2();
+            ((System.ComponentModel.ISupportInitialize)(this.webView21)).BeginInit();
+            this.SuspendLayout();
             // 
             // webView21
             // 
-            webView21.AllowExternalDrop = true;
-            webView21.BackColor = SystemColors.ButtonHighlight;
-            webView21.CreationProperties = null;
-            webView21.DefaultBackgroundColor = Color.White;
-            webView21.Location = new Point(2, -1);
-            webView21.Name = "webView21";
-            webView21.Size = new Size(1204, 616);
-            webView21.TabIndex = 0;
-            webView21.ZoomFactor = 1D;
-            webView21.Click += webView21_Click;
+            this.webView21.AllowExternalDrop = true;
+            this.webView21.BackColor = System.Drawing.SystemColors.ButtonHighlight;
+            this.webView21.CreationProperties = null;
+            this.webView21.DefaultBackgroundColor = System.Drawing.Color.White;
+            this.webView21.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.webView21.Location = new System.Drawing.Point(0, 0);
+            this.webView21.Name = "webView21";
+            this.webView21.Size = new System.Drawing.Size(1204, 616);
+            this.webView21.TabIndex = 0;
+            this.webView21.ZoomFactor = 1D;
+            this.webView21.CoreWebView2InitializationCompleted += new System.EventHandler<Microsoft.Web.WebView2.Core.CoreWebView2InitializationCompletedEventArgs>(this.webView21_CoreWebView2InitializationCompleted);
+            this.webView21.WebMessageReceived += new System.EventHandler<Microsoft.Web.WebView2.Core.CoreWebView2WebMessageReceivedEventArgs>(this.webView21_WebMessageReceived);
             // 
             // MyForm
             // 
-            AutoScaleDimensions = new SizeF(8F, 20F);
-            AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1204, 616);
-            Controls.Add(webView21);
-            Name = "MyForm";
-            Text = "Darkcell Space";
-            ((System.ComponentModel.ISupportInitialize)webView21).EndInit();
-            ResumeLayout(false);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(1204, 616);
+            this.Controls.Add(this.webView21);
+            this.Name = "MyForm";
+            this.Text = "Darkcell Space";
+            ((System.ComponentModel.ISupportInitialize)(this.webView21)).EndInit();
+            this.ResumeLayout(false);
+
         }
 
         #endregion

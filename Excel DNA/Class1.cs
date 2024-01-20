@@ -10,21 +10,21 @@ using Microsoft.Office.Interop.Excel;
 using System.Xml.Linq;
 using System.Text.RegularExpressions;
 using ExcelDna.Integration;
+using Microsoft.Office.Core;
+using IRibbonControl = Microsoft.Office.Core.IRibbonControl;
+using WPFProject2;
+using System.Text.Encodings.Web;
+using System.Net;
+using System.Text;
 
 namespace Excel_DNA
 {
 
-    public class Node
+
+    public class Cell
     {
-        public string? Name { get; set; }
-        public string? Depth { get; set; }
-        public string? Result { get; set; }
-        public List<ParseTreeNode>? ChildNodes { get; set; }
-    }
-    public class NodeDepth
-    {
-        public ParseTreeNode? Node { get; set; }
-        public int? Depth { set; get; }
+        public string Adress { get; set; }
+        public string Fun { get; set; }
     }
 
 
@@ -33,9 +33,14 @@ namespace Excel_DNA
     {
         static List<Node> res = new List<Node>();
 
+        static HttpListener server = new HttpListener();
+
+        static List<Cell> cells = new List<Cell>();
+
         public static Microsoft.Office.Interop.Excel.Application application1 = new Microsoft.Office.Interop.Excel.Application();
         public override string GetCustomUI(string RibbonID)
         {
+            server.Prefixes.Add("http://127.0.0.1:8888/connection/");
             return @"
             <customUI xmlns='http://schemas.microsoft.com/office/2006/01/customui'>
               <ribbon>
@@ -55,7 +60,7 @@ namespace Excel_DNA
               </ribbon>
             </customUI>";
         }
-        public void settingsButtonPressed(IRibbonControl control)
+        public void settingsButtonPressed(ExcelDna.Integration.CustomUI.IRibbonControl control)
         {
             MessageBox.Show("Раздел временно неактивен.");
         }
@@ -108,9 +113,15 @@ namespace Excel_DNA
             RangeGet();
         }
 
-        public static void RangeGet()
+        public async static void RangeGet()
         {
             //application1.Visible = true;
+            //
+            if(server.IsListening)
+            {
+                server.Stop();
+            }
+            server.Start();
             res.Clear();
             Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
             Microsoft.Office.Interop.Excel.Range range = excelApp.ActiveCell;
@@ -139,6 +150,8 @@ namespace Excel_DNA
                     var earlyJson = JsonSerializer.Serialize(res);
                     var earlyUrl = "http://localhost:3000/CreateTreePage/?jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
                     MyForm earlyTreeForm = new MyForm(earlyUrl);
+                    //TestForm testform = new TestForm();
+                    //testform.Show();
                     earlyTreeForm.Show();
                     return;
                 }
@@ -185,14 +198,38 @@ namespace Excel_DNA
 
 
             ParseTreeNode node =  ExcelFormulaParser.Parse(range.Formula);
+            //var win = new WPFProject2.MainWindow(res);
+           // win.Show();
             DepthFirstSearch(node, excelApp, 1);
+            
             var json = JsonSerializer.Serialize(res);
-            var url = "http://localhost:3000/CreateTreePage/?jsonString=" + json + "&lettersFormula" + lettersFormula;
+            var url = "http://localhost:3000/CreateTreePage/?jsonString=" + json.Substring(1,100) + "&lettersFormula" + lettersFormula;
             MyForm treeForm = new MyForm(url);
             treeForm.Show();
 
+            var context = await server.GetContextAsync();
+
+            var response = context.Response;
+
+            response.AddHeader("Access-Control-Allow-Origin", "*");
+            response.AddHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+            response.AddHeader("Access-Control-Allow-Headers", "Content-Type");
+
+
+            byte[] buffer = Encoding.UTF8.GetBytes(json);
+            response.ContentType = "application/json";
+            response.ContentLength64 = buffer.Length;
+            using (Stream output = response.OutputStream)
+            {
+                // отправляем данные
+                await output.WriteAsync(buffer);
+                await output.FlushAsync();
+            }
+            context.Response.Close();
+            server.Stop();
+
         }
-        public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth)
+        public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth, bool flag = false)
         {
             if(root.Term.Name == "CellToken")
             {
@@ -211,13 +248,6 @@ namespace Excel_DNA
             {
                 FormulaAnalyzer analyzer = new FormulaAnalyzer(root);
                 var name = root.Print();
-
-                //application.Range["BBB1000"].Formula = "=" + name;
-                //var range = application.Range["BBB1000"];
-                //var rangeValue = range.Value;
-                //var rangeFormula = range.Formula;
-                //var rangeText = range.Text;
-                //var test = 5;
 
                 Tuple<string,string> result = RangeSet("=" + name);
                 name = result.Item1;
@@ -247,7 +277,23 @@ namespace Excel_DNA
                 var name = root.Print();
                 //var depth = analyzer.Depth().ToString();
                 var result = RangeSet("=" + name);
-                res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result.Item2 });
+                if (flag)
+                {
+                    if (root.ChildNodes.Count == 1 && root.ChildNodes[0].IsParentheses()) //проверка внутри только скобки
+                    {
+                        DepthFirstSearch(root.ChildNodes[0], application, depth, true);
+                        return;
+                    }
+                }
+                else
+                {
+                    res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result.Item2 });
+                }
+                if (root.ChildNodes.Count == 1 && root.ChildNodes[0].IsParentheses()) //проверка внутри только скобки
+                {
+                    DepthFirstSearch(root.ChildNodes[0], application, depth + 1,true);
+                    return;
+                }
                 foreach (var child in root.ChildNodes)
                 {
                     DepthFirstSearch(child, application, depth + 1);
@@ -285,7 +331,9 @@ namespace Excel_DNA
                 res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = range.Text });
                 return;
             }
+            var result = range.Text.Replace("#", "@");
             res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = range.Text.Replace("#", "@") });
+            cells.Add(new Cell { Adress = cellName, Fun = result });
             //string pattern = "^=[A-Z]+\\d*$"; //"^=([0-9A-Z&^:;(),/. *+-]*)?$";
             //Regex regex = new Regex(pattern);
             //if (range.Formula.GetType() == typeof(string) && regex.IsMatch(range.Formula))
