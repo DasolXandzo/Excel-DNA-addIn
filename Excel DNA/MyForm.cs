@@ -65,17 +65,9 @@ namespace Excel_DNA
 
         private void MyForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            //Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
-            //Microsoft.Office.Interop.Excel.Range range = excelApp.Range["A1:BBB1000"];
-            //range.Interior.Color = Color.White;
-            
-            //var cellsArray = new string[] { "A1", "B2", "C3", "D4", "E5" };
-            //Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
-            //for (int i=0; i<cellsArray.Length; i++)
-            //{
-            //    Microsoft.Office.Interop.Excel.Range range = excelApp.Range["A1:BBB1000"];
-            //    range.Interior.Color = Color.White;
-            //}
+            Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
+            Microsoft.Office.Interop.Excel.Range range = excelApp.Range["A1:BBB1000"];
+            range.Interior.ColorIndex = 0;
         }
     }
 }
