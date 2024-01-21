@@ -209,7 +209,8 @@ namespace Excel_DNA
             MyForm treeForm = new MyForm(url);
             treeForm.Show();
             await connection.StartAsync();
-            await connection.InvokeAsync("Send", "user", "mess");
+            await connection.InvokeAsync("Send", application1.UserName, json);
+            await connection.StopAsync();
 
             //var context = await server.GetContextAsync();
 
