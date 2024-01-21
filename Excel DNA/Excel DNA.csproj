@@ -11,16 +11,10 @@
 	<ItemGroup>
 		<PackageReference Include="ExcelDna.Addin" Version="1.7.0" />
 		<PackageReference Include="ExcelDna.Interop" Version="15.0.1" />
+		<PackageReference Include="Microsoft.AspNetCore.Components" Version="6.0.7" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="6.0.7" />
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2210.55" />
 		<PackageReference Include="XLParser" Version="1.7.2" />
-	</ItemGroup>
-	<ItemGroup>
-	  <ProjectReference Include="..\WPFProject2\WPFProject2.csproj" />
-	</ItemGroup>
-	<ItemGroup>
-	  <None Update="Mouse.js">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
 	</ItemGroup>
 
 </Project>

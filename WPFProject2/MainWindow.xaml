@@ -7,14 +7,36 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
-        <ListView x:Name="treeView1" SelectionChanged="treeView1_SelectionChanged">
-            <ListView.View>
-                <GridView>
-                    <GridViewColumn Header="Name" Width="120" DisplayMemberBinding="{Binding Name}" />
-                    <GridViewColumn Header="Age" Width="50" DisplayMemberBinding="{Binding Result}" />
-                </GridView>
-            </ListView.View>
+        <StackPanel Grid.IsSharedSizeScope="True" Orientation="Vertical">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition SharedSizeGroup="NameColumn" Width="150" />
+                    <ColumnDefinition SharedSizeGroup="GenreColumn" Width="150" />
+                    <ColumnDefinition SharedSizeGroup="BornColumn"  Width="150"/>
+                    <ColumnDefinition SharedSizeGroup="DiedColumn" Width="150" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Name"/>
+                <TextBlock Grid.Column="1" Text="Result"/>
+                <TextBlock Grid.Column="2" Text="Addres"/>
+            </Grid>
+            <TreeView x:Name="treeView1" BorderThickness="0" ItemsSource="{Binding Nodes}">
+                <TreeView.ItemTemplate>
+                    <HierarchicalDataTemplate ItemsSource="{Binding Nodes}" >
+                        <Grid>
 
-        </ListView>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="2*"/>
+                            </Grid.ColumnDefinitions>
+
+                   
+                            <TextBlock Text="{Binding Name}" Grid.Column="0"/>
+                            <TextBlock Text="{Binding Result}" Grid.Column="1"/>
+
+                        </Grid>
+                    </HierarchicalDataTemplate>
+                </TreeView.ItemTemplate>
+            </TreeView>
+        </StackPanel>
     </Grid>
 </Window>

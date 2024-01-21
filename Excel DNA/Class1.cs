@@ -1,24 +1,27 @@
 ﻿using ExcelDna.Integration;
 using System.Runtime.InteropServices;
 using ExcelDna.Integration.CustomUI;
-using System.Windows.Forms;
 using XLParser;
 using Irony.Parsing;
-using System.Security.Policy;
 using System.Text.Json;
-using Microsoft.Office.Interop.Excel;
-using System.Xml.Linq;
 using System.Text.RegularExpressions;
-using ExcelDna.Integration;
-using Microsoft.Office.Core;
 using IRibbonControl = Microsoft.Office.Core.IRibbonControl;
-using WPFProject2;
-using System.Text.Encodings.Web;
 using System.Net;
 using System.Text;
+using Microsoft.AspNetCore.SignalR.Client;
+using System;
+using System.Windows;
+using Microsoft.AspNetCore.Components;
 
 namespace Excel_DNA
 {
+
+    public class Node
+    {
+        public string? Name { get; set; }
+        public string? Result { get; set; }
+        public string? Depth { get; set; }
+    }
 
 
     public class Cell
@@ -37,10 +40,21 @@ namespace Excel_DNA
 
         static List<Cell> cells = new List<Cell>();
 
+        static HubConnection connection;
+
+
+
         public static Microsoft.Office.Interop.Excel.Application application1 = new Microsoft.Office.Interop.Excel.Application();
         public override string GetCustomUI(string RibbonID)
         {
             server.Prefixes.Add("http://127.0.0.1:8888/connection/");
+            connection = new HubConnectionBuilder()
+            .WithUrl("https://localhost:7108/chat")
+            .Build();
+            connection.On<string, string>("Receive", (user, message) =>
+            {
+                
+            });
             return @"
             <customUI xmlns='http://schemas.microsoft.com/office/2006/01/customui'>
               <ribbon>
@@ -117,12 +131,9 @@ namespace Excel_DNA
         {
             //application1.Visible = true;
             //
-            if(server.IsListening)
-            {
-                server.Stop();
-            }
-            server.Start();
+            //await hub.Send("asd");
             res.Clear();
+
             Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
             Microsoft.Office.Interop.Excel.Range range = excelApp.ActiveCell;
             res.Add(new Node { Name = range.AddressLocal.Replace("$",""), Result = range.Text.Replace("#", "@"), Depth = "0" });
@@ -188,45 +199,36 @@ namespace Excel_DNA
 
             range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
 
-            //string pattern = @"([A-Z]\d+)\s*([<>]=?|!=)\s*([A-Z]\d+)\s*&\s*([A-Z]\d+)\s*([<>]=?|!=)\s*([A-Z]\d+)";
-            //Regex regex = new Regex(pattern);
-
-            //string transformedString = regex.Replace(lettersFormula, match =>
-            //{
-            //    return $"AND({match.Groups[1].Value}{match.Groups[2].Value}{match.Groups[3].Value}, {match.Groups[4].Value}{match.Groups[5].Value}{match.Groups[6].Value})";
-            //});
-
 
             ParseTreeNode node =  ExcelFormulaParser.Parse(range.Formula);
-            //var win = new WPFProject2.MainWindow(res);
-           // win.Show();
+
             DepthFirstSearch(node, excelApp, 1);
             
             var json = JsonSerializer.Serialize(res);
             var url = "http://localhost:3000/CreateTreePage/?jsonString=" + json.Substring(1,100) + "&lettersFormula" + lettersFormula;
             MyForm treeForm = new MyForm(url);
             treeForm.Show();
+            await connection.StartAsync();
+            await connection.InvokeAsync("Send", application1.UserName, json);
+            await connection.StopAsync();
 
-            var context = await server.GetContextAsync();
+            //var context = await server.GetContextAsync();
 
-            var response = context.Response;
-
-            response.AddHeader("Access-Control-Allow-Origin", "*");
-            response.AddHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-            response.AddHeader("Access-Control-Allow-Headers", "Content-Type");
+            //var response = context.Response;
 
 
-            byte[] buffer = Encoding.UTF8.GetBytes(json);
-            response.ContentType = "application/json";
-            response.ContentLength64 = buffer.Length;
-            using (Stream output = response.OutputStream)
-            {
-                // отправляем данные
-                await output.WriteAsync(buffer);
-                await output.FlushAsync();
-            }
-            context.Response.Close();
+            //byte[] buffer = Encoding.UTF8.GetBytes(json);
+            //response.ContentType = "application/json";
+            //response.ContentLength64 = buffer.Length;
+            //using (Stream output = response.OutputStream)
+            //{
+            //    // отправляем данные
+            //    await output.WriteAsync(buffer);
+            //    await output.FlushAsync();
+            //}
+            //context.Response.Close();
             server.Stop();
+          //  await hub.Send("asd");
 
         }
         public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth, bool flag = false)
