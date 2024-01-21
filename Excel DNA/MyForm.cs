@@ -56,8 +56,6 @@ namespace Excel_DNA
 
         private async void webView21_CoreWebView2InitializationCompleted(object sender, CoreWebView2InitializationCompletedEventArgs e)
         {
-            string script = File.ReadAllText("Mouse.js");
-            await webView21.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(script);
         }
     }
 }

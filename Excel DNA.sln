@@ -5,8 +5,6 @@ VisualStudioVersion = 17.4.33213.308
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Excel DNA", "Excel DNA\Excel DNA.csproj", "{0F12FE14-8534-4874-9A02-BA70802C0812}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WPFProject2", "WPFProject2\WPFProject2.csproj", "{13524A35-B341-4AC3-88D8-ED4CF84D3E49}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,10 +15,6 @@ Global
 		{0F12FE14-8534-4874-9A02-BA70802C0812}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0F12FE14-8534-4874-9A02-BA70802C0812}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0F12FE14-8534-4874-9A02-BA70802C0812}.Release|Any CPU.Build.0 = Release|Any CPU
-		{13524A35-B341-4AC3-88D8-ED4CF84D3E49}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{13524A35-B341-4AC3-88D8-ED4CF84D3E49}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{13524A35-B341-4AC3-88D8-ED4CF84D3E49}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{13524A35-B341-4AC3-88D8-ED4CF84D3E49}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
