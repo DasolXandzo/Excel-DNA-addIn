@@ -67,5 +67,15 @@ namespace Excel_DNA
             Microsoft.Office.Interop.Excel.Range range = excelApp.Range["A1:BBB1000"];
             range.Interior.ColorIndex = 0;
         }
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            base.OnFormClosing(e);
+
+            // Отменить закрытие формы
+            e.Cancel = true;
+
+            // Скрываем форму вместо закрытия
+            this.Hide();
+        }
     }
 }

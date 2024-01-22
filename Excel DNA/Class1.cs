@@ -12,6 +12,8 @@ using Microsoft.AspNetCore.SignalR.Client;
 using System;
 using System.Windows;
 using Microsoft.AspNetCore.Components;
+using System.Security.Policy;
+using System.Runtime.CompilerServices;
 
 namespace Excel_DNA
 {
@@ -21,6 +23,8 @@ namespace Excel_DNA
         public string? Name { get; set; }
         public string? Result { get; set; }
         public string? Depth { get; set; }
+        public List<Node>? Childrens = new List<Node>();
+        public Node? Parent { get; set; }
     }
 
 
@@ -36,24 +40,24 @@ namespace Excel_DNA
     {
         static List<Node> res = new List<Node>();
 
-        static HttpListener server = new HttpListener();
-
         static List<Cell> cells = new List<Cell>();
 
+        static MyForm treeForm = new MyForm("http://localhost:3000/CreateTreePage/?jsonString=asd");
+
         static HubConnection connection;
-
-
 
         public static Microsoft.Office.Interop.Excel.Application application1 = new Microsoft.Office.Interop.Excel.Application();
         public override string GetCustomUI(string RibbonID)
         {
-            server.Prefixes.Add("http://127.0.0.1:8888/connection/");
+            //server.Prefixes.Add("http://127.0.0.1:8888/connection/");
             connection = new HubConnectionBuilder()
             .WithUrl("https://localhost:7108/chat")
             .Build();
             connection.On<string, string>("Receive", async (message, username) =>
             {
-                await connection.InvokeAsync("Send", username, message);
+               // await Task.Delay(2000);
+               // await connection.InvokeAsync("Send", username, message);
+               // await Task.Delay(2000);
             });
             return @"
             <customUI xmlns='http://schemas.microsoft.com/office/2006/01/customui'>
@@ -129,9 +133,6 @@ namespace Excel_DNA
 
         public async static void RangeGet()
         {
-            //application1.Visible = true;
-            //
-            //await hub.Send("asd");
             res.Clear();
 
             Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
@@ -139,8 +140,6 @@ namespace Excel_DNA
             res.Add(new Node { Name = range.AddressLocal.Replace("$",""), Result = range.Text.Replace("#", "@"), Depth = "0" });
             string lettersFormula = range.FormulaLocal.Replace(" ", ""); // Замените на вашу строку с формулой
 
-            //var valueTest = range.Value;
-            //var stop5 = 5;
             string valuesFormulaPattern = @"^=-*\d+(\.\d+)?$"; //@"^=-(\d+\.\d+|\d+)$";
             string stringValuePattern = @"^=""[^""]*""$";
             string allSymbolsPattern = @"^=[^\d]*[a-z]+[^\d]*$";
@@ -202,38 +201,41 @@ namespace Excel_DNA
 
             ParseTreeNode node =  ExcelFormulaParser.Parse(range.Formula);
 
-            DepthFirstSearch(node, excelApp, 1);
-            
+            DepthFirstSearch(node, excelApp,1);
+
+            var nodesToRemove = new List<Node>();
+            foreach (var temp_node in res)
+            {
+                temp_node.Childrens.AddRange(res.Where(x => x.Parent == temp_node));
+                nodesToRemove.AddRange(res.Where(x => x.Parent == temp_node));
+            }
+            foreach (var nodeToRemove in nodesToRemove)
+            {
+                res.Remove(nodeToRemove);
+            }
+
             var json = JsonSerializer.Serialize(res);
             var url = "http://localhost:3000/CreateTreePage/?jsonString=" + json.Substring(1,100) + "&lettersFormula" + lettersFormula;
-            MyForm treeForm = new MyForm(url);
+            //MyForm treeForm = new MyForm(url);
             //treeForm.Show();
+            
+            
+            //treeForm.Show();
+
             await connection.StartAsync();
+            
             await connection.InvokeAsync("Send", application1.UserName, json);
-            //await Task.Delay(2000);
+            
             await connection.StopAsync();
-            treeForm.Show();
 
-            //var context = await server.GetContextAsync();
-
-            //var response = context.Response;
-
-
-            //byte[] buffer = Encoding.UTF8.GetBytes(json);
-            //response.ContentType = "application/json";
-            //response.ContentLength64 = buffer.Length;
-            //using (Stream output = response.OutputStream)
-            //{
-            //    // отправляем данные
-            //    await output.WriteAsync(buffer);
-            //    await output.FlushAsync();
-            //}
-            //context.Response.Close();
-            server.Stop();
-          //  await hub.Send("asd");
+            
+            if(!treeForm.Visible)
+            {
+                treeForm.Show();
+            }
 
         }
-        public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth, bool flag = false)
+        public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth, bool flag = false, Node parent = null)
         {
             if(root.Term.Name == "CellToken")
             {
@@ -245,7 +247,7 @@ namespace Excel_DNA
             if(root.Term.Name == "ReferenceFunctionCall" && root.ChildNodes.Count() == 3)
             {
                 var name = root.Print();
-                res.Add(new Node { Name = name, Depth = depth.ToString(), Result = "<диапазон>" });
+                res.Add(new Node { Name = name, Depth = depth.ToString(), Result = "<диапазон>", Parent = parent });
                 return;
             }
             if (root.IsFunction())
@@ -255,11 +257,11 @@ namespace Excel_DNA
 
                 Tuple<string,string> result = RangeSet("=" + name);
                 name = result.Item1;
-                res.Add(new Node{ Name = name, Depth = depth.ToString(), Result = result.Item2 });
+                res.Add(new Node{ Name = name, Depth = depth.ToString(), Result = result.Item2, Parent = parent });
                 var stop = 5;
                 foreach (var child in root.ChildNodes)
                 {
-                    DepthFirstSearch(child, application, depth + 1);
+                    DepthFirstSearch(child, application, depth + 1,false,parent = res.Last());
                 }
                 return;
             }
@@ -268,7 +270,7 @@ namespace Excel_DNA
                 FormulaAnalyzer analyzer = new FormulaAnalyzer(root);
                 var name = root.Print();
                 var result = "range";
-                res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result });
+                res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result, Parent = parent });
                 //foreach (var child in root.ChildNodes)
                 //{
                 //    DepthFirstSearch(child, application, depth + 1);
@@ -285,22 +287,22 @@ namespace Excel_DNA
                 {
                     if (root.ChildNodes.Count == 1 && root.ChildNodes[0].IsParentheses()) //проверка внутри только скобки
                     {
-                        DepthFirstSearch(root.ChildNodes[0], application, depth, true);
+                        DepthFirstSearch(root.ChildNodes[0], application, depth, true, parent);
                         return;
                     }
                 }
                 else
                 {
-                    res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result.Item2 });
+                    res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result.Item2 , Parent = parent });
                 }
                 if (root.ChildNodes.Count == 1 && root.ChildNodes[0].IsParentheses()) //проверка внутри только скобки
                 {
-                    DepthFirstSearch(root.ChildNodes[0], application, depth + 1,true);
+                    DepthFirstSearch(root.ChildNodes[0], application, depth + 1,true, parent);
                     return;
                 }
                 foreach (var child in root.ChildNodes)
                 {
-                    DepthFirstSearch(child, application, depth + 1);
+                    DepthFirstSearch(child, application, depth + 1, false, res.Last());
                 }
                 return;
             }
@@ -308,7 +310,7 @@ namespace Excel_DNA
 
             foreach (var child in root.ChildNodes)
             {
-                DepthFirstSearch(child, application, depth);
+                DepthFirstSearch(child, application, depth, false,parent);
             }
         }
 
