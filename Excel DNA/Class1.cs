@@ -51,9 +51,9 @@ namespace Excel_DNA
             connection = new HubConnectionBuilder()
             .WithUrl("https://localhost:7108/chat")
             .Build();
-            connection.On<string, string>("Receive", (user, message) =>
+            connection.On<string, string>("Receive", async (message, username) =>
             {
-                
+                await connection.InvokeAsync("Send", username, message);
             });
             return @"
             <customUI xmlns='http://schemas.microsoft.com/office/2006/01/customui'>
@@ -207,10 +207,12 @@ namespace Excel_DNA
             var json = JsonSerializer.Serialize(res);
             var url = "http://localhost:3000/CreateTreePage/?jsonString=" + json.Substring(1,100) + "&lettersFormula" + lettersFormula;
             MyForm treeForm = new MyForm(url);
-            treeForm.Show();
+            //treeForm.Show();
             await connection.StartAsync();
             await connection.InvokeAsync("Send", application1.UserName, json);
+            //await Task.Delay(2000);
             await connection.StopAsync();
+            treeForm.Show();
 
             //var context = await server.GetContextAsync();
 
