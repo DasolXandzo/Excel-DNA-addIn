@@ -4,11 +4,14 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using ExcelDna.Integration;
+using Microsoft.Office.Interop.Excel;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 using Microsoft.Web.WebView2.Wpf;
@@ -35,7 +38,7 @@ namespace Excel_DNA
 
             // Предполагается, что у вас есть экземпляр webView.
             string test = "test";
-            
+
             await webView21.EnsureCoreWebView2Async(env);
             string req = $@"javascript:localStorage.setItem(test,test)";
             var res = await webView21.CoreWebView2.ExecuteScriptAsync("Math.sin(Math.PI/2)");
@@ -45,7 +48,7 @@ namespace Excel_DNA
 
         private void webView21_Click(object sender, EventArgs e)
         {
-           // webView21.CoreWebView2.Navigate("https://www.google.com/");
+            // webView21.CoreWebView2.Navigate("https://www.google.com/");
         }
 
         private void webView21_WebMessageReceived(object sender, CoreWebView2WebMessageReceivedEventArgs e)
@@ -56,6 +59,13 @@ namespace Excel_DNA
 
         private async void webView21_CoreWebView2InitializationCompleted(object sender, CoreWebView2InitializationCompletedEventArgs e)
         {
+        }
+
+        private void MyForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
+            Microsoft.Office.Interop.Excel.Range range = excelApp.Range["A1:BBB1000"];
+            range.Interior.ColorIndex = 0;
         }
     }
 }
