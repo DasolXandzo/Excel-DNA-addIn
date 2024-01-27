@@ -36,18 +36,19 @@ namespace Excel_DNA
 
 
     [ComVisible(true)]
-    public class MyFunctions: ExcelRibbon
+    public class MyFunctions: ExcelRibbon, IExcelAddIn
     {
         static List<Node> res = new List<Node>();
 
         static List<Cell> cells = new List<Cell>();
 
-        static MyForm treeForm = new MyForm("http://localhost:3000/CreateTreePage/?jsonString=asd");
-
         static HubConnection connection;
 
         public static Microsoft.Office.Interop.Excel.Application application1 = new Microsoft.Office.Interop.Excel.Application();
-        public override string GetCustomUI(string RibbonID)
+
+        static MyForm treeForm = new MyForm($"http://localhost:3000/CreateTreePage/?userName={application1.UserName}");
+
+        public void AutoOpen()
         {
             //server.Prefixes.Add("http://127.0.0.1:8888/connection/");
             connection = new HubConnectionBuilder()
@@ -55,10 +56,14 @@ namespace Excel_DNA
             .Build();
             connection.On<string, string>("Receive", async (message, username) =>
             {
-               // await Task.Delay(2000);
-               // await connection.InvokeAsync("Send", username, message);
-               // await Task.Delay(2000);
+                // await Task.Delay(2000);
+                // await connection.InvokeAsync("Send", username, message);
+                // await Task.Delay(2000);
             });
+        }
+
+        public override string GetCustomUI(string RibbonID)
+        {
             return @"
             <customUI xmlns='http://schemas.microsoft.com/office/2006/01/customui'>
               <ribbon>
@@ -250,6 +255,11 @@ namespace Excel_DNA
                 res.Add(new Node { Name = name, Depth = depth.ToString(), Result = "<диапазон>", Parent = parent });
                 return;
             }
+            if (root.IsBinaryOperation())
+            {
+                var name = root.Print();
+                var stop = 5;
+            }
             if (root.IsFunction())
             {
                 FormulaAnalyzer analyzer = new FormulaAnalyzer(root);
@@ -349,6 +359,10 @@ namespace Excel_DNA
             return;
         }
 
+        public void AutoClose()
+        {
+            
+        }
     }
 
 }
