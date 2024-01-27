@@ -14,6 +14,7 @@ using System.Windows;
 using Microsoft.AspNetCore.Components;
 using System.Security.Policy;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
 
 namespace Excel_DNA
 {
@@ -23,6 +24,8 @@ namespace Excel_DNA
         public string? Name { get; set; }
         public string? Result { get; set; }
         public string? Depth { get; set; }
+        //public List<Node>? Childrens { get; set; }
+        [JsonInclude]
         public List<Node>? Childrens = new List<Node>();
         public Node? Parent { get; set; }
     }
@@ -218,9 +221,15 @@ namespace Excel_DNA
             {
                 res.Remove(nodeToRemove);
             }
+            res[0].Childrens.Add(res[1]);
 
-            var json = JsonSerializer.Serialize(res);
-            var url = "http://localhost:3000/CreateTreePage/?jsonString=" + json.Substring(1,100) + "&lettersFormula" + lettersFormula;
+            var options = new JsonSerializerOptions { IncludeFields = true,
+                ReferenceHandler = ReferenceHandler.IgnoreCycles,
+                WriteIndented = true
+            };
+            var json = JsonSerializer.Serialize(res[0], options);
+            res.Clear();
+            //var url = "http://localhost:3000/CreateTreePage/?jsonString=" + json.Substring(1,100) + "&lettersFormula" + lettersFormula;
             //MyForm treeForm = new MyForm(url);
             //treeForm.Show();
             
@@ -242,10 +251,11 @@ namespace Excel_DNA
         }
         public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth, bool flag = false, Node parent = null)
         {
+            //if (parent != null && parent.Childrens == null) parent.Childrens = new List<Node>();
             if(root.Term.Name == "CellToken")
             {
                 var name = root.Token.Text;
-                CellSet(name, depth);
+                CellSet(name, depth, parent);
                 //res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result});
                 return;
             }
@@ -333,22 +343,22 @@ namespace Excel_DNA
             //var test = 5;
         }
 
-        public static void CellSet(string cellName, int cellDepth)
+        public static void CellSet(string cellName, int cellDepth, Node parent)
         {
             Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
             Microsoft.Office.Interop.Excel.Range range = excelApp.Range[cellName];
             if (range.Value == null)
             {
-                res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = "<пусто>" });
+                res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = "<пусто>", Parent = parent });
                 return;
             }
             else if (range.Value.GetType() == typeof(string))
             {
-                res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = range.Text });
+                res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = range.Text, Parent = parent });
                 return;
             }
             var result = range.Text.Replace("#", "@");
-            res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = range.Text.Replace("#", "@") });
+            res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = range.Text.Replace("#", "@"), Parent = parent });
             cells.Add(new Cell { Adress = cellName, Fun = result });
             //string pattern = "^=[A-Z]+\\d*$"; //"^=([0-9A-Z&^:;(),/. *+-]*)?$";
             //Regex regex = new Regex(pattern);
