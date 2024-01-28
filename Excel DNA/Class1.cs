@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Components;
 using System.Security.Policy;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using Microsoft.Office.Interop.Excel;
 
 namespace Excel_DNA
 {
@@ -249,7 +250,7 @@ namespace Excel_DNA
             }
 
         }
-        public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth, bool flag = false, Node parent = null)
+        public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth, bool flag = false, Node parent = null, bool flag_minus = false)
         {
             //if (parent != null && parent.Childrens == null) parent.Childrens = new List<Node>();
             if(root.Term.Name == "CellToken")
@@ -265,10 +266,19 @@ namespace Excel_DNA
                 res.Add(new Node { Name = name, Depth = depth.ToString(), Result = "<диапазон>", Parent = parent });
                 return;
             }
-            if (root.IsBinaryOperation())
+            if (root.IsUnaryOperation())
             {
-                var name = root.Print();
-                var stop = 5;
+                if (root.ChildNodes[1].Term.Name == "-")
+                {
+                    if (flag_minus)
+                    {
+                        if (root.ChildNodes[1].IsUnaryOperation()) //проверка внутри только скобки
+                        {
+                            DepthFirstSearch(root.ChildNodes[0], application, depth, true, parent);
+                            return;
+                        }
+                    }
+                }
             }
             if (root.IsFunction())
             {
