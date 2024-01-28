@@ -28,6 +28,7 @@ namespace Excel_DNA
         [JsonInclude]
         public List<Node>? Childrens = new List<Node>();
         public Node? Parent { get; set; }
+        public string? Type { get; set; }
     }
 
 
@@ -206,6 +207,11 @@ namespace Excel_DNA
 
             DepthFirstSearch(node, excelApp,1);
 
+            SendMessage();
+
+        }
+        public async static void SendMessage()
+        {
             var nodesToRemove = new List<Node>();
             foreach (var temp_node in res)
             {
@@ -218,7 +224,9 @@ namespace Excel_DNA
             }
             res[0].Childrens.Add(res[1]);
 
-            var options = new JsonSerializerOptions { IncludeFields = true,
+            var options = new JsonSerializerOptions
+            {
+                IncludeFields = true,
                 ReferenceHandler = ReferenceHandler.IgnoreCycles,
                 WriteIndented = true
             };
@@ -227,22 +235,15 @@ namespace Excel_DNA
             //var url = "http://localhost:3000/CreateTreePage/?jsonString=" + json.Substring(1,100) + "&lettersFormula" + lettersFormula;
             //MyForm treeForm = new MyForm(url);
             //treeForm.Show();
-            
-            
+
+
             //treeForm.Show();
 
             await connection.StartAsync();
-            
+
             await connection.InvokeAsync("Send", application1.UserName, json);
-            
+
             await connection.StopAsync();
-
-            
-            if(!treeForm.Visible)
-            {
-                treeForm.Show();
-            }
-
         }
         public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth, bool flag = false, Node parent = null)
         {
@@ -254,10 +255,17 @@ namespace Excel_DNA
                 //res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result});
                 return;
             }
-            if(root.Term.Name == "ReferenceFunctionCall" && root.ChildNodes.Count() == 3)
+            if (root.Term.Name == "NumberToken")
+            {
+                var name = root.Token.Text;
+                res.Add(new Node { Name = name, Depth = depth.ToString(), Result = name, Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null) });
+                //res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result});
+                return;
+            }
+            if (root.Term.Name == "ReferenceFunctionCall" && root.ChildNodes.Count() == 3)
             {
                 var name = root.Print();
-                res.Add(new Node { Name = name, Depth = depth.ToString(), Result = "<диапазон>", Parent = parent });
+                res.Add(new Node { Name = name, Depth = depth.ToString(), Result = "<диапазон>", Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null) });
                 return;
             }
             if (root.IsFunction())
@@ -267,11 +275,12 @@ namespace Excel_DNA
 
                 Tuple<string,string> result = RangeSet("=" + name);
                 name = result.Item1;
-                res.Add(new Node{ Name = name, Depth = depth.ToString(), Result = result.Item2, Parent = parent });
+                
+                res.Add(new Node{ Name = name, Depth = depth.ToString(), Result = result.Item2, Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null), Type = "function" });
                 var stop = 5;
                 foreach (var child in root.ChildNodes)
                 {
-                    DepthFirstSearch(child, application, depth + 1,false,parent = res.Last());
+                    DepthFirstSearch(child, application, depth + 1, false, parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) <= depth) : null));
                 }
                 return;
             }
@@ -303,11 +312,11 @@ namespace Excel_DNA
                 }
                 else
                 {
-                    res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result.Item2 , Parent = parent });
+                    res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result.Item2 , Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null), Type = "function" });
                 }
                 if (root.ChildNodes.Count == 1 && root.ChildNodes[0].IsParentheses()) //проверка внутри только скобки
                 {
-                    DepthFirstSearch(root.ChildNodes[0], application, depth + 1,true, parent);
+                    DepthFirstSearch(root.ChildNodes[0], application, depth,true, parent);
                     return;
                 }
                 foreach (var child in root.ChildNodes)
@@ -339,16 +348,16 @@ namespace Excel_DNA
             Microsoft.Office.Interop.Excel.Range range = excelApp.Range[cellName];
             if (range.Value == null)
             {
-                res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = "<пусто>", Parent = parent });
+                res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = "<пусто>", Parent = (cellDepth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < cellDepth) : null) });
                 return;
             }
             else if (range.Value.GetType() == typeof(string))
             {
-                res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = range.Text, Parent = parent });
+                res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = range.Text, Parent = (cellDepth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < cellDepth) : null) });
                 return;
             }
             var result = range.Text.Replace("#", "@");
-            res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = range.Text.Replace("#", "@"), Parent = parent });
+            res.Add(new Node { Name = cellName, Depth = cellDepth.ToString(), Result = range.Text.Replace("#", "@"), Parent = (cellDepth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < cellDepth) : null) });
             cells.Add(new Cell { Adress = cellName, Fun = result });
             //string pattern = "^=[A-Z]+\\d*$"; //"^=([0-9A-Z&^:;(),/. *+-]*)?$";
             //Regex regex = new Regex(pattern);
