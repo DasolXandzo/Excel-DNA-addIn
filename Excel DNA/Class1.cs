@@ -16,6 +16,7 @@ using System.Security.Policy;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using Microsoft.Office.Interop.Excel;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 
 namespace Excel_DNA
 {
@@ -52,6 +53,8 @@ namespace Excel_DNA
         public static Microsoft.Office.Interop.Excel.Application application1 = new Microsoft.Office.Interop.Excel.Application();
 
         static MyForm treeForm = new MyForm($"http://localhost:3000/CreateTreePage/?userName={application1.UserName}");
+
+        static bool minus = true;
 
         public void AutoOpen()
         {
@@ -238,18 +241,33 @@ namespace Excel_DNA
             };
             var json = JsonSerializer.Serialize(res[0], options);
             res.Clear();
-            //var url = "http://localhost:3000/CreateTreePage/?jsonString=" + json.Substring(1,100) + "&lettersFormula" + lettersFormula;
-            //MyForm treeForm = new MyForm(url);
-            //treeForm.Show();
 
+            int chunkSize = 500;
 
-            //treeForm.Show();
+            var chunks = Enumerable.Range(0, json.Length / chunkSize)
+                               .Select(i => json.Substring(i * chunkSize, chunkSize));
 
             await connection.StartAsync();
+            try
+            {
+                await connection.InvokeAsync("Send", application1.UserName, json);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error invoking hub method: {ex.Message}");
+                // Дополнительная обработка ошибки по вашему усмотрению
+            }
 
-            await connection.InvokeAsync("Send", application1.UserName, json);
+            //await connection.InvokeAsync("SendJsonChunk", chunks.First(), true);
+
+            //foreach (var chunk in chunks.Skip(1))
+            //{
+            //    await connection.InvokeAsync("SendJsonChunk", chunk, false);
+            //}
 
             await connection.StopAsync();
+
+            treeForm.Show();
         }
         public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth, bool flag = false, Node parent = null, bool flag_minus = false)
         {
@@ -276,15 +294,22 @@ namespace Excel_DNA
             }
             if (root.IsUnaryOperation())
             {
-                if (root.ChildNodes[1].Term.Name == "-")
+                var name = root.Print();
+
+                var result = RangeSet("=" + name);
+                name = result.Item1;
+                return;
+                if (root.ChildNodes[0].Term.Name == "-")
                 {
-                    if (flag_minus)
+                    if (minus)
                     {
-                        if (root.ChildNodes[1].IsUnaryOperation()) //проверка внутри только скобки
-                        {
-                            DepthFirstSearch(root.ChildNodes[0], application, depth, true, parent);
-                            return;
-                        }
+                        return;
+                    }
+                    else
+                    {
+                        res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result.Item2, Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null)});
+                        minus = true;
+                        return;
                     }
                 }
             }
