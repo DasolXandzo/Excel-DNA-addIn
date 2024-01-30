@@ -15,7 +15,6 @@ using Microsoft.AspNetCore.Components;
 using System.Security.Policy;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
-using Microsoft.Office.Interop.Excel;
 
 namespace Excel_DNA
 {
@@ -41,19 +40,18 @@ namespace Excel_DNA
 
 
     [ComVisible(true)]
-    public class MyFunctions: ExcelRibbon, IExcelAddIn
+    public class MyFunctions: ExcelRibbon
     {
         static List<Node> res = new List<Node>();
 
         static List<Cell> cells = new List<Cell>();
 
+        static MyForm treeForm = new MyForm("http://localhost:3000/CreateTreePage/?jsonString=asd");
+
         static HubConnection connection;
 
         public static Microsoft.Office.Interop.Excel.Application application1 = new Microsoft.Office.Interop.Excel.Application();
-
-        static MyForm treeForm = new MyForm($"http://localhost:3000/CreateTreePage/?userName={application1.UserName}");
-
-        public void AutoOpen()
+        public override string GetCustomUI(string RibbonID)
         {
             //server.Prefixes.Add("http://127.0.0.1:8888/connection/");
             connection = new HubConnectionBuilder()
@@ -61,14 +59,10 @@ namespace Excel_DNA
             .Build();
             connection.On<string, string>("Receive", async (message, username) =>
             {
-                // await Task.Delay(2000);
-                // await connection.InvokeAsync("Send", username, message);
-                // await Task.Delay(2000);
+               // await Task.Delay(2000);
+               // await connection.InvokeAsync("Send", username, message);
+               // await Task.Delay(2000);
             });
-        }
-
-        public override string GetCustomUI(string RibbonID)
-        {
             return @"
             <customUI xmlns='http://schemas.microsoft.com/office/2006/01/customui'>
               <ribbon>
@@ -213,11 +207,6 @@ namespace Excel_DNA
 
             DepthFirstSearch(node, excelApp,1);
 
-            SendMessage();
-
-        }
-        public async static void SendMessage()
-        {
             var nodesToRemove = new List<Node>();
             foreach (var temp_node in res)
             {
@@ -230,9 +219,7 @@ namespace Excel_DNA
             }
             res[0].Childrens.Add(res[1]);
 
-            var options = new JsonSerializerOptions
-            {
-                IncludeFields = true,
+            var options = new JsonSerializerOptions { IncludeFields = true,
                 ReferenceHandler = ReferenceHandler.IgnoreCycles,
                 WriteIndented = true
             };
@@ -241,17 +228,24 @@ namespace Excel_DNA
             //var url = "http://localhost:3000/CreateTreePage/?jsonString=" + json.Substring(1,100) + "&lettersFormula" + lettersFormula;
             //MyForm treeForm = new MyForm(url);
             //treeForm.Show();
-
-
+            
+            
             //treeForm.Show();
 
             await connection.StartAsync();
-
+            
             await connection.InvokeAsync("Send", application1.UserName, json);
-
+            
             await connection.StopAsync();
-        }
-        public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth, bool flag = false, Node parent = null, bool flag_minus = false)
+             
+            
+            if(!treeForm.Visible)
+            {
+                treeForm.Show();
+            }
+
+        } 
+        public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth, bool flag = false, Node parent = null)
         {
             //if (parent != null && parent.Childrens == null) parent.Childrens = new List<Node>();
             if(root.Term.Name == "CellToken")
@@ -268,25 +262,15 @@ namespace Excel_DNA
                 //res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result});
                 return;
             }
+            //if (root.Term.Name = "-")
+            //{
+                  
+            //}
             if (root.Term.Name == "ReferenceFunctionCall" && root.ChildNodes.Count() == 3)
             {
                 var name = root.Print();
                 res.Add(new Node { Name = name, Depth = depth.ToString(), Result = "<диапазон>", Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null) });
                 return;
-            }
-            if (root.IsUnaryOperation())
-            {
-                if (root.ChildNodes[1].Term.Name == "-")
-                {
-                    if (flag_minus)
-                    {
-                        if (root.ChildNodes[1].IsUnaryOperation()) //проверка внутри только скобки
-                        {
-                            DepthFirstSearch(root.ChildNodes[0], application, depth, true, parent);
-                            return;
-                        }
-                    }
-                }
             }
             if (root.IsFunction())
             {
@@ -388,10 +372,6 @@ namespace Excel_DNA
             return;
         }
 
-        public void AutoClose()
-        {
-            
-        }
     }
 
 }
