@@ -156,6 +156,7 @@ namespace Excel_DNA
             string valuesFormulaPattern = @"^=-*\d+(\.\d+)?$"; //@"^=-(\d+\.\d+|\d+)$";
             string stringValuePattern = @"^=""[^""]*""$";
             string allSymbolsPattern = @"^=[^\d]*[a-z]+[^\d]*$";
+            string ONEmorePATTERN = @"^=""[^""]*""$";
 
             // пустая ячейка
             if (range.Formula == "" && range.Value == null && range.Text == "")
@@ -169,14 +170,16 @@ namespace Excel_DNA
                 if (range.Value.GetType() == typeof(int) || range.Value.GetType() == typeof(float) || range.Value.GetType() == typeof(double))
                 {
                     range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
-                    //res[0].Result = range.Text;
-                    var earlyJson = JsonSerializer.Serialize(res);
-                    var earlyUrl = "http://localhost:3000/CreateTreePage/?jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
-                    MyForm earlyTreeForm = new MyForm(earlyUrl);
-                    //TestForm testform = new TestForm();
-                    //testform.Show();
-                    earlyTreeForm.Show();
+                    SendMessage(true);
                     return;
+                    ////res[0].Result = range.Text;
+                    //var earlyJson = JsonSerializer.Serialize(res);
+                    //var earlyUrl = "http://localhost:3000/CreateTreePage/?jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
+                    //MyForm earlyTreeForm = new MyForm(earlyUrl);
+                    ////TestForm testform = new TestForm();
+                    ////testform.Show();
+                    //earlyTreeForm.Show();
+                    //return;
                 }
                 // ячейка с текстом, без "=" в начале
                 else if (range.Value.GetType() == typeof(string))
@@ -189,24 +192,28 @@ namespace Excel_DNA
             else if (Regex.IsMatch(range.Formula, valuesFormulaPattern))
             {
                 range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
-                //res[0].Result = range.Text;
                 res.Add(new Node { Name = range.Text, Result = range.Text, Depth = "1" });
-                var earlyJson = JsonSerializer.Serialize(res);
-                var earlyUrl = "http://localhost:3000/CreateTreePage/?jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
-                MyForm earlyTreeForm = new MyForm(earlyUrl);
-                earlyTreeForm.Show();
+                SendMessage(false);
                 return;
+                //var earlyJson = JsonSerializer.Serialize(res);
+                //var earlyUrl = "http://localhost:3000/CreateTreePage/?jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
+                //MyForm earlyTreeForm = new MyForm(earlyUrl);
+                //earlyTreeForm.Show();
+                //return;
             }
             // ТУТ ДОЛЖНА БЫТЬ ПРОВЕРКА НА ЗНАЧЕНИЕ ЯЧЕЙКИ ФОРМАТА =text, ="text"  (ну или обработка ошибки #ИМЯ?)
             else if (Regex.IsMatch(range.Formula, allSymbolsPattern) || Regex.IsMatch(range.Formula, stringValuePattern))
             {
                 range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
                 res.Add(new Node { Name = range.FormulaLocal.Substring(1), Result = range.Text.Replace("#", "@"), Depth = "1" });
-                var earlyJson = JsonSerializer.Serialize(res);
-                var earlyUrl = "http://localhost:3000/CreateTreePage/?jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
-                MyForm earlyTreeForm = new MyForm(earlyUrl);
-                earlyTreeForm.Show();
+                if (Regex.IsMatch(range.Formula, ONEmorePATTERN)) SendMessage(false);
+                else SendMessage(true);
                 return;
+                //var earlyJson = JsonSerializer.Serialize(res);
+                //var earlyUrl = "http://localhost:3000/CreateTreePage/?jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
+                //MyForm earlyTreeForm = new MyForm(earlyUrl);
+                //earlyTreeForm.Show();
+                //return;
             }
 
             range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
@@ -216,10 +223,10 @@ namespace Excel_DNA
 
             DepthFirstSearch(node, excelApp,1);
 
-            SendMessage();
+            SendMessage(false);
 
         }
-        public async static void SendMessage()
+        public async static void SendMessage(bool special_Value)
         {
             var nodesToRemove = new List<Node>();
             foreach (var temp_node in res)
@@ -231,7 +238,7 @@ namespace Excel_DNA
             {
                 res.Remove(nodeToRemove);
             }
-            res[0].Childrens.Add(res[1]);
+            if (!special_Value) res[0].Childrens.Add(res[1]);
 
             var options = new JsonSerializerOptions
             {
@@ -269,21 +276,19 @@ namespace Excel_DNA
 
             treeForm.Show();
         }
-        public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth, bool flag = false, Node parent = null, bool flag_minus = false)
+        public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth, bool flag = false, Node parent = null, bool minus = false, bool binary_operation = true)
         {
             //if (parent != null && parent.Childrens == null) parent.Childrens = new List<Node>();
             if(root.Term.Name == "CellToken")
             {
                 var name = root.Token.Text;
                 CellSet(name, depth, parent);
-                //res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result});
                 return;
             }
             if (root.Term.Name == "NumberToken")
             {
                 var name = root.Token.Text;
                 res.Add(new Node { Name = name, Depth = depth.ToString(), Result = name, Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null) });
-                //res.Add(new Node { Name = name, Depth = depth.ToString(), Result = result});
                 return;
             }
             if (root.Term.Name == "ReferenceFunctionCall" && root.ChildNodes.Count() == 3)
@@ -298,7 +303,7 @@ namespace Excel_DNA
 
                 var result = RangeSet("=" + name);
                 name = result.Item1;
-                return;
+                //return;
                 if (root.ChildNodes[0].Term.Name == "-")
                 {
                     if (minus)
@@ -312,9 +317,17 @@ namespace Excel_DNA
                         return;
                     }
                 }
+                return;
             }
             if (root.IsFunction())
             {
+                if (root.IsBinaryOperation())
+                {
+                    if (binary_operation)
+                    {
+                        
+                    }
+                }
                 FormulaAnalyzer analyzer = new FormulaAnalyzer(root);
                 var name = root.Print();
 
