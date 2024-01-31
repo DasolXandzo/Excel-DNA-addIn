@@ -150,7 +150,7 @@ namespace Excel_DNA
 
             Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
             Microsoft.Office.Interop.Excel.Range range = excelApp.ActiveCell;
-            res.Add(new Node { Name = range.AddressLocal.Replace("$",""), Result = range.Text.Replace("#", "@"), Depth = "0" });
+            res.Add(new Node { Name = range.AddressLocal.Replace("$",""), Result = range.Text.Replace("#", "@"), Depth = "0", Type = "function" });
             string lettersFormula = range.FormulaLocal.Replace(" ", ""); // Замените на вашу строку с формулой
 
             string valuesFormulaPattern = @"^=-*\d+(\.\d+)?$"; //@"^=-(\d+\.\d+|\d+)$";
@@ -195,11 +195,6 @@ namespace Excel_DNA
                 res.Add(new Node { Name = range.Text, Result = range.Text, Depth = "1" });
                 SendMessage(false);
                 return;
-                //var earlyJson = JsonSerializer.Serialize(res);
-                //var earlyUrl = "http://localhost:3000/CreateTreePage/?jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
-                //MyForm earlyTreeForm = new MyForm(earlyUrl);
-                //earlyTreeForm.Show();
-                //return;
             }
             // ТУТ ДОЛЖНА БЫТЬ ПРОВЕРКА НА ЗНАЧЕНИЕ ЯЧЕЙКИ ФОРМАТА =text, ="text"  (ну или обработка ошибки #ИМЯ?)
             else if (Regex.IsMatch(range.Formula, allSymbolsPattern) || Regex.IsMatch(range.Formula, stringValuePattern))
@@ -209,11 +204,6 @@ namespace Excel_DNA
                 if (Regex.IsMatch(range.Formula, ONEmorePATTERN)) SendMessage(false);
                 else SendMessage(true);
                 return;
-                //var earlyJson = JsonSerializer.Serialize(res);
-                //var earlyUrl = "http://localhost:3000/CreateTreePage/?jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
-                //MyForm earlyTreeForm = new MyForm(earlyUrl);
-                //earlyTreeForm.Show();
-                //return;
             }
 
             range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
@@ -238,7 +228,7 @@ namespace Excel_DNA
             {
                 res.Remove(nodeToRemove);
             }
-            if (!special_Value) res[0].Childrens.Add(res[1]);
+           // if (!special_Value) res[0].Childrens.Add(res[1]);
 
             var options = new JsonSerializerOptions
             {
@@ -279,15 +269,32 @@ namespace Excel_DNA
         public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth, bool flag = false, Node parent = null, bool minus = false, bool binary_operation = false)
         {
             //if (parent != null && parent.Childrens == null) parent.Childrens = new List<Node>();
+            if(binary_operation)
+            {
+                if(root.Term.Name == "CellToken")
+                {
+                    var name_node = root.Print();
+                    var result_node = RangeSet("=" + name_node);
+                    res.Add(new Node { Name = name_node, Result = result_node.Item2, Depth = depth.ToString(), Parent = parent });
+                }
+                else
+                {
+                    foreach (var child in root.ChildNodes)
+                    {
+                        DepthFirstSearch(child, application, depth, false, parent, minus, binary_operation);
+                    }
+                }
+                return;
+            }
             if (root.Term.Name == "CellToken")
             {
-                if (binary_operation)
-                {
-                        var name_node = root.Print();
-                        var result_node = RangeSet("=" + name_node);
-                        res.Add(new Node { Name = name_node, Result = result_node.Item2, Depth = depth.ToString(), Parent = parent });
-                        return;
-                }
+                //if (binary_operation)
+                //{
+                //        var name_node = root.Print();
+                //        var result_node = RangeSet("=" + name_node);
+                //        res.Add(new Node { Name = name_node, Result = result_node.Item2, Depth = depth.ToString(), Parent =  });
+                //        return;
+                //}
                 var name = root.Token.Text;
                 CellSet(name, depth, parent);
                 return;
@@ -332,7 +339,11 @@ namespace Excel_DNA
                 {
                     foreach (var child in root.ChildNodes)
                     {
-                        DepthFirstSearch(child, application, depth, false, parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) <= depth) : null), false, true);
+                       var node_name = root.Print();
+                       var result_node = RangeSet("=" + node_name);
+                        Node node = new Node { Name = node_name, Result = result_node.Item2, Depth = depth.ToString(), Type = "function", Parent = (depth >= 0 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) <= depth) : null) };
+                       res.Add(node);
+                       DepthFirstSearch(child, application, depth + 1, false, parent = res.Last(), false, true);
                     }
                     return;
                 }
