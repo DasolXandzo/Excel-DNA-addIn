@@ -276,11 +276,18 @@ namespace Excel_DNA
 
             treeForm.Show();
         }
-        public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth, bool flag = false, Node parent = null, bool minus = false, bool binary_operation = true)
+        public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth, bool flag = false, Node parent = null, bool minus = false, bool binary_operation = false)
         {
             //if (parent != null && parent.Childrens == null) parent.Childrens = new List<Node>();
-            if(root.Term.Name == "CellToken")
+            if (root.Term.Name == "CellToken")
             {
+                if (binary_operation)
+                {
+                        var name_node = root.Print();
+                        var result_node = RangeSet("=" + name_node);
+                        res.Add(new Node { Name = name_node, Result = result_node.Item2, Depth = depth.ToString(), Parent = parent });
+                        return;
+                }
                 var name = root.Token.Text;
                 CellSet(name, depth, parent);
                 return;
@@ -323,10 +330,11 @@ namespace Excel_DNA
             {
                 if (root.IsBinaryOperation())
                 {
-                    if (binary_operation)
+                    foreach (var child in root.ChildNodes)
                     {
-                        
+                        DepthFirstSearch(child, application, depth, false, parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) <= depth) : null), false, true);
                     }
+                    return;
                 }
                 FormulaAnalyzer analyzer = new FormulaAnalyzer(root);
                 var name = root.Print();
@@ -387,7 +395,7 @@ namespace Excel_DNA
 
             foreach (var child in root.ChildNodes)
             {
-                DepthFirstSearch(child, application, depth, false,parent);
+                DepthFirstSearch(child, application, depth, false,parent, minus,binary_operation);
             }
         }
 
