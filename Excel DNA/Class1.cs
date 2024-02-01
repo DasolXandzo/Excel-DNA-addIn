@@ -170,16 +170,8 @@ namespace Excel_DNA
                 if (range.Value.GetType() == typeof(int) || range.Value.GetType() == typeof(float) || range.Value.GetType() == typeof(double))
                 {
                     range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
-                    SendSpecialMessage();
+                    SendMessage();
                     return;
-                    ////res[0].Result = range.Text;
-                    //var earlyJson = JsonSerializer.Serialize(res);
-                    //var earlyUrl = "http://localhost:3000/CreateTreePage/?jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
-                    //MyForm earlyTreeForm = new MyForm(earlyUrl);
-                    ////TestForm testform = new TestForm();
-                    ////testform.Show();
-                    //earlyTreeForm.Show();
-                    //return;
                 }
                 // ячейка с текстом, без "=" в начале
                 else if (range.Value.GetType() == typeof(string))
@@ -195,25 +187,14 @@ namespace Excel_DNA
                 res.Add(new Node { Name = range.Text, Result = range.Text, Depth = "1" });
                 SendMessage();
                 return;
-                //var earlyJson = JsonSerializer.Serialize(res);
-                //var earlyUrl = "http://localhost:3000/CreateTreePage/?jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
-                //MyForm earlyTreeForm = new MyForm(earlyUrl);
-                //earlyTreeForm.Show();
-                //return;
             }
-            // ТУТ ДОЛЖНА БЫТЬ ПРОВЕРКА НА ЗНАЧЕНИЕ ЯЧЕЙКИ ФОРМАТА =text, ="text"  (ну или обработка ошибки #ИМЯ?)
+            // ТУТ ДОЛЖНА БЫТЬ ПРОВЕРКА НА ЗНАЧЕНИЕ ЯЧЕЙКИ ФОРМАТА =text, ="text"
             else if (Regex.IsMatch(range.Formula, allSymbolsPattern) || Regex.IsMatch(range.Formula, stringValuePattern))
             {
                 range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
                 res.Add(new Node { Name = range.FormulaLocal.Substring(1), Result = range.Text.Replace("#", "@"), Depth = "1" });
-                if (Regex.IsMatch(range.Formula, ONEmorePATTERN)) SendMessage();
-                else SendSpecialMessage();
+                SendMessage();
                 return;
-                //var earlyJson = JsonSerializer.Serialize(res);
-                //var earlyUrl = "http://localhost:3000/CreateTreePage/?jsonString=" + earlyJson + "&lettersFormula" + lettersFormula;
-                //MyForm earlyTreeForm = new MyForm(earlyUrl);
-                //earlyTreeForm.Show();
-                //return;
             }
 
             range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
@@ -221,7 +202,8 @@ namespace Excel_DNA
 
             ParseTreeNode node =  ExcelFormulaParser.Parse(range.Formula);
 
-            DepthFirstSearch(node, excelApp,1);
+            DepthFirstSearch(node, excelApp, 1);
+
 
             SendMessage();
 
@@ -239,57 +221,7 @@ namespace Excel_DNA
             {
                 res.Remove(nodeToRemove);
             }
-            res[0].Childrens.Add(res[1]);
-
-            var options = new JsonSerializerOptions
-            {
-                IncludeFields = true,
-                ReferenceHandler = ReferenceHandler.IgnoreCycles,
-                WriteIndented = true
-            };
-            var json = JsonSerializer.Serialize(res[0], options);
-            res.Clear();
-
-            int chunkSize = 500;
-
-            var chunks = Enumerable.Range(0, json.Length / chunkSize)
-                               .Select(i => json.Substring(i * chunkSize, chunkSize));
-
-            await connection.StartAsync();
-            try
-            {
-                await connection.InvokeAsync("Send", application1.UserName, json);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error invoking hub method: {ex.Message}");
-                // Дополнительная обработка ошибки по вашему усмотрению
-            }
-
-            //await connection.InvokeAsync("SendJsonChunk", chunks.First(), true);
-
-            //foreach (var chunk in chunks.Skip(1))
-            //{
-            //    await connection.InvokeAsync("SendJsonChunk", chunk, false);
-            //}
-
-            await connection.StopAsync();
-
-            treeForm.Show();
-        }
-
-        public async static void SendSpecialMessage()
-        {
-            var nodesToRemove = new List<Node>();
-            foreach (var temp_node in res)
-            {
-                temp_node.Childrens.AddRange(res.Where(x => x.Parent == temp_node));
-                nodesToRemove.AddRange(res.Where(x => x.Parent == temp_node));
-            }
-            foreach (var nodeToRemove in nodesToRemove)
-            {
-                res.Remove(nodeToRemove);
-            }
+            if (res.Count > 1) res[0].Childrens.Add(res[1]);
 
             var options = new JsonSerializerOptions
             {
