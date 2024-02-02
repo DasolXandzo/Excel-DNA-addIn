@@ -52,7 +52,7 @@ namespace Excel_DNA
 
         public static Microsoft.Office.Interop.Excel.Application application1 = new Microsoft.Office.Interop.Excel.Application();
 
-        static MyForm treeForm = new MyForm($"http://localhost:3000/CreateTreePage/?userName={application1.UserName}");
+        static MyForm treeForm = new MyForm($"http://194.87.74.186:3000/CreateTreePage/?userName={application1.UserName}");
 
         static bool minus = true;
 
@@ -60,7 +60,7 @@ namespace Excel_DNA
         {
             //server.Prefixes.Add("http://127.0.0.1:8888/connection/");
             connection = new HubConnectionBuilder()
-            .WithUrl("https://localhost:7108/chat")
+            .WithUrl("https://darkcell.ru/chathub")
             .Build();
             connection.On<string, string>("Receive", async (message, username) =>
             {
@@ -255,9 +255,10 @@ namespace Excel_DNA
             var chunks = Enumerable.Range(0, json.Length / chunkSize)
                                .Select(i => json.Substring(i * chunkSize, chunkSize));
 
-            await connection.StartAsync();
+            
             try
             {
+                await connection.StartAsync();
                 await connection.InvokeAsync("Send", application1.UserName, json);
             }
             catch (Exception ex)
