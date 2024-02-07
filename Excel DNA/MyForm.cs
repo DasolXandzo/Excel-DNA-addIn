@@ -23,6 +23,7 @@ namespace Excel_DNA
     {
         public MyForm(string url)
         {
+            TopMost = true;
             InitializeComponent();
             var test = InitAsync(url);
         }
@@ -76,6 +77,13 @@ namespace Excel_DNA
 
             // Скрываем форму вместо закрытия
             this.Hide();
+        }
+
+        private void webView21_KeyDown(object sender, KeyEventArgs e)
+        {
+            if(e.KeyCode== Keys.Escape) {
+                this.Hide();
+            }
         }
     }
 }

@@ -143,6 +143,12 @@ namespace Excel_DNA
         {
             RangeGet();
         }
+        // ShortCut for hide tree
+        [ExcelCommand(ShortCut = "{ESC}")]
+        public static void HideShortCutTree()
+        {
+            treeForm.Hide();
+        }
 
         public async static void RangeGet()
         {
@@ -150,7 +156,9 @@ namespace Excel_DNA
 
             Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
             Microsoft.Office.Interop.Excel.Range range = excelApp.ActiveCell;
-            res.Add(new Node { Name = range.AddressLocal.Replace("$",""), Result = range.Text.Replace("#", "@"), Depth = "0", Type = "function" });
+
+            //range.Text.Replace("#", "@")
+            res.Add(new Node { Name = range.AddressLocal.Replace("$",""), Result = string.Format("{0:F2}", range.Value), Depth = "0", Type = "function" });
             string lettersFormula = range.FormulaLocal.Replace(" ", ""); // Замените на вашу строку с формулой
 
             string valuesFormulaPattern = @"^=-*\d+(\.\d+)?$"; //@"^=-(\d+\.\d+|\d+)$";
@@ -221,7 +229,10 @@ namespace Excel_DNA
             {
                 res.Remove(nodeToRemove);
             }
-            res[0].Childrens.Add(res[1]);
+            if(res.Count > 1)
+            {
+                res[0].Childrens.Add(res[1]);
+            }
 
             var options = new JsonSerializerOptions
             {
@@ -231,12 +242,6 @@ namespace Excel_DNA
             };
             var json = JsonSerializer.Serialize(res[0], options);
             res.Clear();
-
-            int chunkSize = 500;
-
-            var chunks = Enumerable.Range(0, json.Length / chunkSize)
-                               .Select(i => json.Substring(i * chunkSize, chunkSize));
-
             
             try
             {
@@ -274,7 +279,7 @@ namespace Excel_DNA
                 res.Remove(nodeToRemove);
             }
             if (res.Count > 1) res[0].Childrens.Add(res[1]);
-
+                
             var options = new JsonSerializerOptions
             {
                 IncludeFields = true,
@@ -315,6 +320,12 @@ namespace Excel_DNA
         public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth, bool flag = false, Node parent = null, bool minus = false, bool binary_operation = false)
         {
             //if (parent != null && parent.Childrens == null) parent.Childrens = new List<Node>();
+            if (root.Term.Name == "Number_new")
+            {
+                var name_node = root.Token.ValueString;
+                var result_node = RangeSet("=" + name_node);
+                res.Add(new Node { Name = name_node, Result = result_node.Item2, Depth = depth.ToString(), Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null) });
+            }
             if (root.Term.Name == "CellToken")
             {
                 if (binary_operation)
@@ -366,13 +377,78 @@ namespace Excel_DNA
             {
                 if (root.IsBinaryOperation())
                 {
-                    foreach (var child in root.ChildNodes)
+                    if(root.ChildNodes.Count == 3)
                     {
-                        DepthFirstSearch(child, application, depth, false, parent = (depth >= 1 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) <= depth) : null), false, true);
+                        var bin_name = root.Print();
+                        Tuple<string, string> bin_result = RangeSet("=" + bin_name);
+                        bin_name = bin_result.Item1;
+
+                        //BinaryFunZero(root.ChildNodes[0]);
+
+                        var cell_args = new List<ParseTreeNode>();
+
+                        BinaryFunZero(root, ref cell_args);
+
+                        BinaryFunSecond(root, ref cell_args);
+
+                        //if (CheckIsBinary(root.ChildNodes[0]))
+                        //{
+                        //    if (CheckIsNoBinFun(root.ChildNodes[0]))
+                        //    {
+                        //        cell_args.Add(root.ChildNodes[0]);
+                        //    }
+                        //    FormulaAnalyzer analyzer = new FormulaAnalyzer(root.ChildNodes[0]);
+                        //    var cells = analyzer.AllNodes.Where(x => x.Term.ToString() == "Cell");
+                        //    var col = root.GetFunctionArguments();
+                        //    var num = analyzer.Numbers();
+                        //    cell_args.AddRange(cells);
+                        //    foreach(var arg in num)
+                        //    {
+                        //        cell_args.Add(new ParseTreeNode(new Token(new Terminal("Number_new"), new SourceLocation(), "test", arg)));
+                        //    }
+                        //    //root.ChildNodes.AddRange(num);
+                        //}
+
+                        //if (CheckIsBinary(root.ChildNodes[2]))
+                        //{
+                        //    FormulaAnalyzer analyzer = new FormulaAnalyzer(root.ChildNodes[2]);
+                        //    var cells = analyzer.AllNodes.Where(x => x.Term.ToString() == "Cell");
+                        //    var col = root.GetFunctionArguments();
+                        //    var num = analyzer.Numbers();
+                        //    cell_args.AddRange(cells);
+                        //    foreach (var arg in num)
+                        //    {
+                        //        cell_args.Add(new ParseTreeNode(new Token(new Terminal("Number_new"), new SourceLocation(), "test", arg)));
+                        //    }
+                        //    root.ChildNodes.AddRange(num);
+                        //}
+
+                        res.Add(new Node { Name = bin_name, Depth = depth.ToString(), Result = bin_result.Item2, 
+                            Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null), 
+                            Type = "function" });
+
+                        if(cell_args.Count > 0)
+                        {
+                            for (int i = 0; i < cell_args.Count; i++) {
+                                DepthFirstSearch(cell_args[i], application, depth + 1, false, res.Last());
+                            }
+                        }
+                        else
+                        {
+                            for (int i = 0; i < root.ChildNodes.Count; i++)
+                            {
+                                if (i == 1)
+                                {
+                                    continue;
+                                }
+                                DepthFirstSearch(root.ChildNodes[i], application, depth + 1, false, res.Last());
+                            }
+                        }
+                        return;
                     }
                     return;
                 }
-                FormulaAnalyzer analyzer = new FormulaAnalyzer(root);
+                
                 var name = root.Print();
 
                 Tuple<string,string> result = RangeSet("=" + name);
@@ -440,7 +516,9 @@ namespace Excel_DNA
             Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
             excelApp.Range["BBB1000"].Formula = formula;
             Microsoft.Office.Interop.Excel.Range range = excelApp.Range["BBB1000"];
-            return Tuple.Create(range.FormulaLocal.Substring(1), range.Text.Replace("#", "@"));
+            var res = string.Format("{0:F2}", range.Value);
+            //range.Text.Replace("#", "@")
+            return Tuple.Create(range.FormulaLocal.Substring(1), res);
             //var test = 5;
         }
 
@@ -468,6 +546,88 @@ namespace Excel_DNA
             //    res.Add(new Node { Name = range.Formula.ToString(), Depth = (cellDepth+1).ToString(), Result = range.Text.Replace("#", "@") });
             //}
             return;
+        }
+
+        private static void AddBinaryToRes(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth, Node parent = null)
+        {
+            var bin_name = root.Print();
+            Tuple<string, string> bin_result = RangeSet("=" + bin_name);
+            bin_name = bin_result.Item1;
+
+            res.Add(new Node { Name = bin_name, Depth = depth.ToString(), Result = bin_result.Item2, Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null), Type = "function" });
+            DepthFirstSearch(root.ChildNodes[0], application, depth + 1, false, parent = res.Last());
+            DepthFirstSearch(root.ChildNodes[2], application, depth + 1, false, parent = res.Last());
+            return;
+        }
+
+        private static bool CheckIsBinary(ParseTreeNode node)
+        {
+            if (node.IsBinaryOperation()) return true;
+            foreach (var child in node.ChildNodes)
+            {
+                if (CheckIsBinary(child))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        private static bool CheckIsNoBinFun(ParseTreeNode node)
+        {
+            if (node.IsFunction() && !node.IsBinaryOperation()) return true;
+            foreach (var child in node.ChildNodes)
+            {
+                if (CheckIsNoBinFun(child))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static void BinaryFunZero(ParseTreeNode root, ref List<ParseTreeNode> cell_args)
+        {
+            //var cell_args = new List<ParseTreeNode>();
+            if (CheckIsBinary(root.ChildNodes[0]))
+            {
+                if (CheckIsNoBinFun(root.ChildNodes[0]))
+                {
+                    cell_args.Add(root.ChildNodes[0]);
+                    return;
+                }
+                FormulaAnalyzer analyzer = new FormulaAnalyzer(root.ChildNodes[0]);
+                var cells = analyzer.AllNodes.Where(x => x.Term.ToString() == "Cell");
+                var col = root.GetFunctionArguments();
+                var num = analyzer.Numbers();
+                cell_args.AddRange(cells);
+                foreach (var arg in num)
+                {
+                    cell_args.Add(new ParseTreeNode(new Token(new Terminal("Number_new"), new SourceLocation(), "test", arg)));
+                }
+                //root.ChildNodes.AddRange(num);
+            }
+        }
+        private static void BinaryFunSecond(ParseTreeNode root, ref List<ParseTreeNode> cell_args)
+        {
+            //var cell_args = new List<ParseTreeNode>();
+            if (CheckIsBinary(root.ChildNodes[2]))
+            {
+                if (CheckIsNoBinFun(root.ChildNodes[2]))
+                {
+                    cell_args.Add(root.ChildNodes[2]);
+                    return;
+                }
+                FormulaAnalyzer analyzer = new FormulaAnalyzer(root.ChildNodes[2]);
+                var cells = analyzer.AllNodes.Where(x => x.Term.ToString() == "Cell");
+                var col = root.GetFunctionArguments();
+                var num = analyzer.Numbers();
+                cell_args.AddRange(cells);
+                foreach (var arg in num)
+                {
+                    cell_args.Add(new ParseTreeNode(new Token(new Terminal("Number_new"), new SourceLocation(), "test", arg)));
+                }
+                //root.ChildNodes.AddRange(num);
+            }
         }
 
         public void AutoClose()
