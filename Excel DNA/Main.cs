@@ -26,6 +26,7 @@ namespace Excel_DNA
 
         static ExcelApplicaton exApp = ExApp.GetInstance();
 
+        // TODO: Ivanco: весь "хард код" путей и прочего либо в settings, либо в static readonly
         static MyForm treeForm = new MyForm($"http://194.87.74.186:3000/CreateTreePage/?userName={exApp.UserName}");
 
         static bool minus = true;
@@ -135,6 +136,7 @@ namespace Excel_DNA
             res.Add(new FormulaNode { Name = range.AddressLocal.Replace("$",""), Result = string.Format("{0:F2}", range.Value), Depth = "0", Type = "function" });
             string lettersFormula = range.FormulaLocal.Replace(" ", ""); // Замените на вашу строку с формулой
 
+            // TODO:Ivanco:регулярки обьявляем так - Regex regex = new Regex(@"туп(\w*)"); 
             string valuesFormulaPattern = @"^=-*\d+(\.\d+)?$"; //@"^=-(\d+\.\d+|\d+)$";
             string stringValuePattern = @"^=""[^""]*""$";
             string allSymbolsPattern = @"^=[^\d]*[a-z]+[^\d]*$";
@@ -149,8 +151,13 @@ namespace Excel_DNA
             else if (range.Formula[0] != '=')
             {
                 // ячейка с числом
+                // TODO: Ivanco: range.Value.GetType() - один раз вычисляем в переменную - затем используем
+                // TODO: Ivanco: isNumeric - переменная - вычисляем bool затем используем
                 if (range.Value.GetType() == typeof(int) || range.Value.GetType() == typeof(float) || range.Value.GetType() == typeof(double))
                 {
+                    // TODO:Ivanco:окрашиваем начальную ячейку в розовый - 100500 комментов одного и того же в коде.
+                    // это что какая то сложная строка? - все эти комменты удалить
+                    // TODO:Ivanco: Color.Pink - если это какой то стандартный цвет, в static read only , на уровне приложения.
                     range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
                     SendMessage();
                     return;
@@ -170,10 +177,13 @@ namespace Excel_DNA
                 SendMessage();
                 return;
             }
+            // TODO: Ivanco: если нужно что то доделать - используйте TODO
             // ТУТ ДОЛЖНА БЫТЬ ПРОВЕРКА НА ЗНАЧЕНИЕ ЯЧЕЙКИ ФОРМАТА =text, ="text"
             else if (Regex.IsMatch(range.Formula, allSymbolsPattern) || Regex.IsMatch(range.Formula, stringValuePattern))
             {
                 range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
+                // TODO: Ivanco: сделать конструкторы для класса.
+                // инициализация через именованные параметры выглядит очень громоздко, здесь и по всему коду дальше.
                 res.Add(new FormulaNode { Name = range.FormulaLocal.Substring(1), Result = range.Text.Replace("#", "@"), Depth = "1" });
                 SendMessage();
                 return;
@@ -228,6 +238,7 @@ namespace Excel_DNA
                 // Дополнительная обработка ошибки по вашему усмотрению
             }
 
+            // TODO: Ivanco: все закомментированное лучше убирать. для этого есть git
             //await connection.InvokeAsync("SendJsonChunk", chunks.First(), true);
 
             //foreach (var chunk in chunks.Skip(1))
@@ -263,7 +274,7 @@ namespace Excel_DNA
             var json = JsonSerializer.Serialize(res[0], options);
             res.Clear();
 
-            int chunkSize = 500;
+            int chunkSize = 500;// TODO: Ivanco:в static readonly или config на уровне приложения
 
             var chunks = Enumerable.Range(0, json.Length / chunkSize)
                                .Select(i => json.Substring(i * chunkSize, chunkSize));
@@ -291,13 +302,19 @@ namespace Excel_DNA
             treeForm.Show();
         }
 
+        // TODO: Ivanco: application - через singleton
+        // все длинные вызовы убрать
         public static void DepthFirstSearch(ParseTreeNode root, Microsoft.Office.Interop.Excel.Application application, int depth, bool flag = false, FormulaNode parent = null, bool minus = false, bool binary_operation = false)
         {
             //if (parent != null && parent.Childrens == null) parent.Childrens = new List<Node>();
+            // TODO: Ivanco: root.Term.Name - один раз в переменную
+            //// TODO: Ivanco: 4 if ниже, больше похоже на switch
             if (root.Term.Name == "Number_new")
             {
                 var name_node = root.Token.ValueString;
                 var result_node = RangeSet("=" + name_node);
+                // TODO: Ivanco: сделать конструкторы
+                // TODO: Ivanco: убрать все расчеты в инициализации класса, считаем отдельно в переменную сперва(см.Parent)
                 res.Add(new FormulaNode { Name = name_node, Result = result_node.Item2, Depth = depth.ToString(), Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null) });
             }
             if (root.Term.Name == "CellToken")
@@ -325,6 +342,10 @@ namespace Excel_DNA
                 res.Add(new FormulaNode { Name = name, Depth = depth.ToString(), Result = "<диапазон>", Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null) });
                 return;
             }
+            // TODO: Ivanco: сначала определить ТИП операции отдельной функцией
+            //  нужно сделать класса OperationType там какой то Enum с типами
+            // и функция вычисления типа.всю логику вычислений типа из Main убрать
+
             if (root.IsUnaryOperation())
             {
                 var name = root.Print();
