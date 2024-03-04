@@ -1,54 +1,32 @@
-﻿using ExcelDna.Integration;
-using System.Runtime.InteropServices;
-using ExcelDna.Integration.CustomUI;
-using XLParser;
-using Irony.Parsing;
+﻿using System.Runtime.InteropServices;
 using System.Text.Json;
-using System.Text.RegularExpressions;
-using IRibbonControl = Microsoft.Office.Core.IRibbonControl;
-using Microsoft.AspNetCore.SignalR.Client;
 using System.Text.Json.Serialization;
-using System.Collections;
-using System.Reflection;
-using System.Resources;
-using System.IO.Compression;
-using System.Text;
+using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.SignalR.Client;
+using Excel_DNA.Core;
+using Excel_DNA.Models;
+using ExcelDna.Integration;
+using ExcelDna.Integration.CustomUI;
+using Irony.Parsing;
+using XLParser;
+using ExcelApplicaton = Microsoft.Office.Interop.Excel.Application;
+using Range = Microsoft.Office.Interop.Excel.Range;
+using IDnaRibbonControl = ExcelDna.Integration.CustomUI.IRibbonControl;
 
 namespace Excel_DNA
 {
-
-    public class Node
-    {
-        public string? Name { get; set; }
-        public string? Result { get; set; }
-        public string? Depth { get; set; }
-
-        [JsonInclude]
-        public List<Node>? Childrens = new List<Node>();
-        public Node? Parent { get; set; }
-        public string? Type { get; set; }
-    }
-
-
-    public class Cell
-    {
-        public string Adress { get; set; }
-        public string Fun { get; set; }
-    }
-
-
     [ComVisible(true)]
-    public class MyFunctions: ExcelRibbon, IExcelAddIn
+    public class CoreFunctions: ExcelRibbon, IExcelAddIn
     {
-        static List<Node> res = new List<Node>();
+        static List<FormulaNode> res = new List<FormulaNode>();
 
         static List<Cell> cells = new List<Cell>();
 
         static HubConnection connection;
 
-        public static Microsoft.Office.Interop.Excel.Application application1 = new Microsoft.Office.Interop.Excel.Application();
-
+        static ExcelApplicaton exApp = ExApp.GetInstance();
         static MyForm treeForm = new MyForm($"http://localhost:3000/CreateTreePage/?userName={application1.UserName}");
+
 
         static bool minus = true;
 
@@ -86,12 +64,12 @@ namespace Excel_DNA
               </ribbon>
             </customUI>";
         }
-        public void settingsButtonPressed(ExcelDna.Integration.CustomUI.IRibbonControl control)
+        public void settingsButtonPressed(IDnaRibbonControl control)
         {
             MessageBox.Show("Раздел временно неактивен.");
         }
 
-        public void errorFormButtonPressed(IRibbonControl control)
+        public void errorFormButtonPressed(IDnaRibbonControl control)
         {
             var url = "http://localhost:3000/ErrorFormPage";
             MyForm errorForm = new MyForm(url);
@@ -112,7 +90,7 @@ namespace Excel_DNA
                 "4) About us - открывает страницу с подробной информацией о нашем расширении.");
         }
 
-        public void helpButtonPressed(IRibbonControl control)
+        public void helpButtonPressed(IDnaRibbonControl control)
         {
             MessageBox.Show("Руководство по надстройке Darkcell:\n\n" +
                 "Раздел 'Formula tree'\n" +
@@ -123,11 +101,11 @@ namespace Excel_DNA
                 "3) Help - открывает окно с кратким описанием интерфейса надстройки и её функционала. (Ctrl+Shift+H)\n" +
                 "4) About us - открывает страницу с подробной информацией о нашем расширении.");
         }
-        public void aboutButtonPressed(IRibbonControl control)
+        public void aboutButtonPressed(IDnaRibbonControl control)
         {
             MessageBox.Show("Раздел временно неактивен.");
         }
-        public void createTreeButtonPressed(IRibbonControl control)
+        public void createTreeButtonPressed(IDnaRibbonControl control)
         {
             RangeGet();
         }
@@ -149,13 +127,14 @@ namespace Excel_DNA
         {
             res.Clear();
 
-            Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
-            Microsoft.Office.Interop.Excel.Range range = excelApp.ActiveCell;
+            ExcelApplicaton exApp = ExApp.GetInstance();
+            Range range = exApp.ActiveCell;
 
             //range.Text.Replace("#", "@")
-            res.Add(new Node { Name = range.AddressLocal.Replace("$",""), Result = string.Format("{0:F2}", range.Value), Depth = "0", Type = "function" });
+            res.Add(new FormulaNode { Name = range.AddressLocal.Replace("$",""), Result = string.Format("{0:F2}", range.Value), Depth = "0", Type = "function" });
             string lettersFormula = range.FormulaLocal.Replace(" ", ""); // Замените на вашу строку с формулой
 
+            // TODO:Ivanco:регулярки обьявляем так - Regex regex = new Regex(@"туп(\w*)"); 
             string valuesFormulaPattern = @"^=-*\d+(\.\d+)?$"; //@"^=-(\d+\.\d+|\d+)$";
             string stringValuePattern = @"^=""[^""]*""$";
             string allSymbolsPattern = @"^=[^\d]*[a-z]+[^\d]*$";
@@ -170,8 +149,13 @@ namespace Excel_DNA
             else if (range.Formula[0] != '=')
             {
                 // ячейка с числом
+                // TODO: Ivanco: range.Value.GetType() - один раз вычисляем в переменную - затем используем
+                // TODO: Ivanco: isNumeric - переменная - вычисляем bool затем используем
                 if (range.Value.GetType() == typeof(int) || range.Value.GetType() == typeof(float) || range.Value.GetType() == typeof(double))
                 {
+                    // TODO:Ivanco:окрашиваем начальную ячейку в розовый - 100500 комментов одного и того же в коде.
+                    // это что какая то сложная строка? - все эти комменты удалить
+                    // TODO:Ivanco: Color.Pink - если это какой то стандартный цвет, в static read only , на уровне приложения.
                     range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
                     SendMessage();
                     return;
@@ -187,15 +171,18 @@ namespace Excel_DNA
             else if (Regex.IsMatch(range.Formula, valuesFormulaPattern))
             {
                 range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
-                res.Add(new Node { Name = range.Text, Result = range.Text, Depth = "1" });
+                res.Add(new FormulaNode { Name = range.Text, Result = range.Text, Depth = "1" });
                 SendMessage();
                 return;
             }
+            // TODO: Ivanco: если нужно что то доделать - используйте TODO
             // ТУТ ДОЛЖНА БЫТЬ ПРОВЕРКА НА ЗНАЧЕНИЕ ЯЧЕЙКИ ФОРМАТА =text, ="text"
             else if (Regex.IsMatch(range.Formula, allSymbolsPattern) || Regex.IsMatch(range.Formula, stringValuePattern))
             {
                 range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
-                res.Add(new Node { Name = range.FormulaLocal.Substring(1), Result = range.Text.Replace("#", "@"), Depth = "1" });
+                // TODO: Ivanco: сделать конструкторы для класса.
+                // инициализация через именованные параметры выглядит очень громоздко, здесь и по всему коду дальше.
+                res.Add(new FormulaNode { Name = range.FormulaLocal.Substring(1), Result = range.Text.Replace("#", "@"), Depth = "1" });
                 SendMessage();
                 return;
             }
@@ -206,6 +193,7 @@ namespace Excel_DNA
             ParseTreeNode node =  ExcelFormulaParser.Parse(range.Formula);
 
             FormulaParserExcel parser = new FormulaParserExcel();
+
 
             parser.DepthFirstSearch(node, excelApp, 1);
 
@@ -219,7 +207,7 @@ namespace Excel_DNA
 
         public async static void SendMessage()
         {
-            var nodesToRemove = new List<Node>();
+            var nodesToRemove = new List<FormulaNode>();
             foreach (var temp_node in res)
             {
                 temp_node.Childrens.AddRange(res.Where(x => x.Parent == temp_node));
@@ -246,19 +234,17 @@ namespace Excel_DNA
             try
             {
                 await connection.StartAsync();
-                await connection.InvokeAsync("Send", application1.UserName, json);
+                await connection.InvokeAsync("Send", exApp.UserName, json);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error invoking hub method: {ex.Message}");
                 // Дополнительная обработка ошибки по вашему усмотрению
             }
-
             await connection.StopAsync();
 
             treeForm.Show();
         }
-
 
         
         public void AutoClose()
