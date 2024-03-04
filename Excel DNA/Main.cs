@@ -25,7 +25,7 @@ namespace Excel_DNA
         static HubConnection connection;
 
         static ExcelApplicaton exApp = ExApp.GetInstance();
-        static MyForm treeForm = new MyForm($"http://localhost:3000/CreateTreePage/?userName={application1.UserName}");
+        static MyForm treeForm = new MyForm($"http://localhost:3000/CreateTreePage/?userName={exApp.UserName}");
 
 
         static bool minus = true;
@@ -195,7 +195,7 @@ namespace Excel_DNA
             FormulaParserExcel parser = new FormulaParserExcel();
 
 
-            parser.DepthFirstSearch(node, excelApp, 1);
+            parser.DepthFirstSearch(node, exApp, 1);
 
             res = parser.GetRes();
 
