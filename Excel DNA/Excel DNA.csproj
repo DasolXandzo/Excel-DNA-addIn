@@ -8,6 +8,16 @@
     <Nullable>enable</Nullable>
 	  
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="FunctionMetadata.gzip" />
+    <None Remove="Translator.gzip" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="FunctionMetadata.gzip" />
+    <EmbeddedResource Include="Translator.gzip" />
+  </ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="ExcelDna.Addin" Version="1.7.0" />
 		<PackageReference Include="ExcelDna.Interop" Version="15.0.1" />
@@ -15,6 +25,11 @@
 		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="6.0.7" />
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2210.55" />
 		<PackageReference Include="XLParser" Version="1.7.2" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Reference Include="Newtonsoft.Json">
+	    <HintPath>..\..\..\..\Downloads\Arixcel_Explorer_v8.7.8793\ArixcelExplorer\lib\Newtonsoft.Json.dll</HintPath>
+	  </Reference>
 	</ItemGroup>
 
 </Project>
