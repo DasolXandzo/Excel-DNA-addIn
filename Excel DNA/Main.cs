@@ -157,7 +157,7 @@ namespace Excel_DNA
                     // это что какая то сложная строка? - все эти комменты удалить
                     // TODO:Ivanco: Color.Pink - если это какой то стандартный цвет, в static read only , на уровне приложения.
                     range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
-                    SendMessage();
+                    SendMessage("");
                     return;
                 }
                 // ячейка с текстом, без "=" в начале
@@ -172,7 +172,7 @@ namespace Excel_DNA
             {
                 range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
                 res.Add(new FormulaNode { Name = range.Text, Result = range.Text, Depth = "1" });
-                SendMessage();
+                SendMessage("");
                 return;
             }
             // TODO: Ivanco: если нужно что то доделать - используйте TODO
@@ -183,7 +183,7 @@ namespace Excel_DNA
                 // TODO: Ivanco: сделать конструкторы для класса.
                 // инициализация через именованные параметры выглядит очень громоздко, здесь и по всему коду дальше.
                 res.Add(new FormulaNode { Name = range.FormulaLocal.Substring(1), Result = range.Text.Replace("#", "@"), Depth = "1" });
-                SendMessage();
+                SendMessage("");
                 return;
             }
 
@@ -201,36 +201,14 @@ namespace Excel_DNA
 
             cells = parser.GetCells();
 
-            SendMessage();
+            string json = parser.GetJson();
+
+            SendMessage(json);
 
         }
 
-        public async static void SendMessage()
+        public async static void SendMessage(string json)
         {
-            var nodesToRemove = new List<FormulaNode>();
-            foreach (var temp_node in res)
-            {
-                temp_node.Childrens.AddRange(res.Where(x => x.Parent == temp_node));
-                nodesToRemove.AddRange(res.Where(x => x.Parent == temp_node));
-            }
-            foreach (var nodeToRemove in nodesToRemove)
-            {
-                res.Remove(nodeToRemove);
-            }
-            if(res.Count > 1)
-            {
-                res[0].Childrens.Add(res[1]);
-            }
-
-            var options = new JsonSerializerOptions
-            {
-                IncludeFields = true,
-                ReferenceHandler = ReferenceHandler.IgnoreCycles,
-                WriteIndented = true
-            };
-            var json = System.Text.Json.JsonSerializer.Serialize(res[0], options);
-            res.Clear();
-            
             try
             {
                 await connection.StartAsync();

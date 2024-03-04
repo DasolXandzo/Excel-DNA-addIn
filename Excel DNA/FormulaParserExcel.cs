@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
+using System.Text.Json;
 using System.Threading.Tasks;
 using XLParser;
 
@@ -17,6 +19,20 @@ namespace Excel_DNA
 
         public List<FormulaNode> GetRes()
         {
+            var nodesToRemove = new List<FormulaNode>();
+            foreach (var temp_node in res)
+            {
+                temp_node.Childrens.AddRange(res.Where(x => x.Parent == temp_node));
+                nodesToRemove.AddRange(res.Where(x => x.Parent == temp_node));
+            }
+            foreach (var nodeToRemove in nodesToRemove)
+            {
+                res.Remove(nodeToRemove);
+            }
+            if (res.Count > 1)
+            {
+                res[0].Childrens.Add(res[1]);
+            }
             return res;
         }
         public List<Cell> GetCells() { return cells; }
@@ -314,6 +330,18 @@ namespace Excel_DNA
                     cell_args.Add(new ParseTreeNode(new Token(new Terminal("NumberToken"), new SourceLocation(), "test", arg)));
                 }
             }
+        }
+        public string GetJson() 
+        {
+            var options = new JsonSerializerOptions
+            {
+                IncludeFields = true,
+                ReferenceHandler = ReferenceHandler.IgnoreCycles,
+                WriteIndented = true
+            };
+            var json = System.Text.Json.JsonSerializer.Serialize(res[0], options);
+            res.Clear();
+            return json;
         }
     }
 }
