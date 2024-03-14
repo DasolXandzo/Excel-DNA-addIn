@@ -1,14 +1,10 @@
 ﻿using Excel_DNA.Models;
 using ExcelDna.Integration;
 using Irony.Parsing;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.Json;
-using System.Threading.Tasks;
 using XLParser;
+using ExcelApplicaton = Microsoft.Office.Interop.Excel.Application;
 
 namespace Excel_DNA
 {
@@ -16,7 +12,11 @@ namespace Excel_DNA
     {
         public static List<FormulaNode> res = new List<FormulaNode>();
         public static List<Cell> cells = new List<Cell>();
-
+        static ExcelApplicaton exApp;
+        public FormulaParserExcel(ExcelApplicaton App)
+        {
+            exApp = App; 
+        }
         public List<FormulaNode> GetRes()
         {
             var nodesToRemove = new List<FormulaNode>();
@@ -206,10 +206,11 @@ namespace Excel_DNA
 
         public static Tuple<string, string> RangeSet(string formula)
         {
-            Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
-            excelApp.Range["BBB1000"].Formula = formula;
-            Microsoft.Office.Interop.Excel.Range range = excelApp.Range["BBB1000"];
-            var res = string.Format("{0:F2}", range.Value);
+            //Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
+            exApp.Range["BBB1000"].Formula = formula;
+            Microsoft.Office.Interop.Excel.Range range = exApp.Range["BBB1000"];
+            var value = exApp.Evaluate(formula);
+            var res = string.Format("{0:F2}", value);
             return Tuple.Create(range.FormulaLocal.Substring(1), res);
         }
 

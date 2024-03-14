@@ -192,12 +192,12 @@ namespace Excel_DNA
 
             ParseTreeNode node =  ExcelFormulaParser.Parse(range.Formula);
 
-            FormulaParserExcel parser = new FormulaParserExcel();
+            FormulaParserExcel parser = new FormulaParserExcel(exApp);
 
 
             parser.DepthFirstSearch(node, exApp, 1);
 
-            res = parser.GetRes();
+            res.AddRange(parser.GetRes());
 
             cells = parser.GetCells();
 
@@ -227,7 +227,7 @@ namespace Excel_DNA
         
         public void AutoClose()
         {
-            
+            exApp.Quit();
         }
     }
 
