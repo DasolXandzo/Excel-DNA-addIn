@@ -27,132 +27,79 @@ namespace ParseTests
         }
 
         [Theory]
-        [InlineData(@"
-        {
-            ""Name"": ""-(-(-(-1)))\u002BC5"",
-            ""Result"": ""2,00"",
-            ""Depth"": ""1"",
-            ""Parent"": null,
-            ""Type"": ""function"",
-            ""Childrens"": [
-                {
-                    ""Name"": ""-(-(-(-1)))"",
-                    ""Result"": ""1,00"",
-                    ""Depth"": ""2"",
-                    ""Parent"": null,
-                    ""Type"": null,
-                    ""Childrens"": []
-                },
-                {
-                    ""Name"": ""C5"",
-                    ""Result"": ""1"",
-                    ""Depth"": ""2"",
-                    ""Parent"": null,
-                    ""Type"": null,
-                    ""Childrens"": []
-                }
-            ]
-        }", "G5")]
-        [InlineData(@"
-        {
-            ""Name"": ""\u0421\u0423\u041C\u041C(\u0421\u0420\u0417\u041D\u0410\u0427(C10:D10);\u0421\u0423\u041C\u041C(C10:D10;\u0421\u0420\u0417\u041D\u0410\u0427(C10:D10));-C10;-1)"",
-            ""Result"": ""4,00"",
-            ""Depth"": ""1"",
-            ""Parent"": null,
-            ""Type"": ""function"",
-            ""Childrens"": [
-                {
-                    ""Name"": ""\u0421\u0420\u0417\u041D\u0410\u0427(C10:D10)"",
-                    ""Result"": ""1,50"",
-                    ""Depth"": ""2"",
-                    ""Parent"": null,
-                    ""Type"": ""function"",
-                    ""Childrens"": [
-                        {
-                            ""Name"": ""C10:D10"",
-                            ""Result"": ""\u003C\u0434\u0438\u0430\u043F\u0430\u0437\u043E\u043D\u003E"",
-                            ""Depth"": ""3"",
-                            ""Parent"": null,
-                            ""Type"": null,
-                            ""Childrens"": []
-                        }
-                    ]
-                },
-                {
-                    ""Name"": ""\u0421\u0423\u041C\u041C(C10:D10;\u0421\u0420\u0417\u041D\u0410\u0427(C10:D10))"",
-                    ""Result"": ""4,50"",
-                    ""Depth"": ""2"",
-                    ""Parent"": null,
-                    ""Type"": ""function"",
-                    ""Childrens"": [
-                        {
-                            ""Name"": ""C10:D10"",
-                            ""Result"": ""\u003C\u0434\u0438\u0430\u043F\u0430\u0437\u043E\u043D\u003E"",
-                            ""Depth"": ""3"",
-                            ""Parent"": null,
-                            ""Type"": null,
-                            ""Childrens"": []
-                        },
-                        {
-                            ""Name"": ""\u0421\u0420\u0417\u041D\u0410\u0427(C10:D10)"",
-                            ""Result"": ""1,50"",
-                            ""Depth"": ""3"",
-                            ""Parent"": null,
-                            ""Type"": ""function"",
-                            ""Childrens"": [
-                                {
-                                    ""Name"": ""C10:D10"",
-                                    ""Result"": ""\u003C\u0434\u0438\u0430\u043F\u0430\u0437\u043E\u043D\u003E"",
-                                    ""Depth"": ""4"",
-                                    ""Parent"": null,
-                                    ""Type"": null,
-                                    ""Childrens"": []
-                                }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    ""Name"": ""-C10"",
-                    ""Result"": ""-1,00"",
-                    ""Depth"": ""2"",
-                    ""Parent"": null,
-                    ""Type"": null,
-                    ""Childrens"": []
-                },
-                {
-                    ""Name"": ""-1"",
-                    ""Result"": ""-1,00"",
-                    ""Depth"": ""2"",
-                    ""Parent"": null,
-                    ""Type"": null,
-                    ""Childrens"": []
-                }
-            ]
-        }", "G10")]
-        public void GetRes_Returns_Expected_Json(string expectedJson, string formula)
+        [MemberData(nameof(GetTestCases))]
+        
+        public void GetRes_Returns_Expected_Json(string cellWithFormula, FormulaNode expected)
         {
             // Arrange
-            ParseTreeNode node = ExcelFormulaParser.Parse((string)excelApplicaton.Range[formula].Formula);
+            var node = ExcelFormulaParser.Parse((string)excelApplicaton.Range[cellWithFormula].Formula);
 
-            FormulaParserExcel formulaParser = new FormulaParserExcel(excelApplicaton);
+            var formulaParser = new FormulaParserExcel(excelApplicaton);
 
             formulaParser.DepthFirstSearch(node, excelApplicaton, 1);
 
             // Act
-            var res = formulaParser.GetRes();
-
-            string resultJson = formulaParser.GetJson();
+            var actual = formulaParser.GetRes()[0];
 
             // Assert
-            Assert.NotNull(resultJson);
-            // Ñðàâíåíèå ñòðîê JSON
-            Assert.Equal(
-           JsonConvert.SerializeObject(JsonConvert.DeserializeObject(expectedJson)),
-           JsonConvert.SerializeObject(JsonConvert.DeserializeObject(resultJson))
-       );
+            AssertFormulaNode(expected, actual);
+        }
 
-
+        public static IEnumerable<object[]> GetTestCases()
+        {
+            yield return new object[]
+            {
+                "G2",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "A2+1", Result = 4d, Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "A2", Result = 3d, Parent = null, Type = null },
+                        new() { Depth = 2, Name = "1", Result = 1, Parent = null, Type = null }
+                    }
+                }
+            };
+            
+            yield return new object[]
+            {
+                "G5",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "-(-(-(-1)))+C5", Result = 2d, Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "-(-(-(-1)))", Result = 1d, Parent = null, Type = null },
+                        new() { Depth = 2, Name = "C5", Result = 1d, Parent = null, Type = null }
+                    }
+                }
+            };
+            
+            yield return new object[]
+            {
+                "G10",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "SUM(AVERAGE(C10:D10),SUM(C10:D10,AVERAGE(C10:D10)),-C10,-1)", Result = 4d, Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "AVERAGE(C10:D10)", Result = 1.5d, Parent = null, Type = "function", Childrens = new List<FormulaNode>
+                        {
+                            new() { Depth = 3, Name = "C10:D10", Result = "<Ð´Ð¸Ð°Ð¿Ð°Ð·Ð¾Ð½>", Parent = null, Type = null }
+                        }},
+                        new() { Depth = 2, Name = "SUM(C10:D10,AVERAGE(C10:D10))", Result = 4.5d, Parent = null, Type = "function", Childrens = new List<FormulaNode>
+                        {
+                            new() { Depth = 3, Name = "C10:D10", Result = "<Ð´Ð¸Ð°Ð¿Ð°Ð·Ð¾Ð½>", Parent = null, Type = null },
+                            new() { Depth = 3, Name = "AVERAGE(C10:D10)", Result = 1.5d, Parent = null, Type = "function", Childrens = new List<FormulaNode>
+                            {
+                                new() { Depth = 4, Name = "C10:D10", Result = "<Ð´Ð¸Ð°Ð¿Ð°Ð·Ð¾Ð½>", Parent = null, Type = null }
+                            }}
+                        }},
+                        new() { Depth = 2, Name = "-C10", Result = -1d, Parent = null, Type = null },
+                        new() { Depth = 2, Name = "-1", Result = -1d, Parent = null, Type = null },
+                    }
+                }
+            };
         }
     }
 }

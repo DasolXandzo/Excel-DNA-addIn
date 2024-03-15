@@ -131,7 +131,7 @@ namespace Excel_DNA
             Range range = exApp.ActiveCell;
 
             //range.Text.Replace("#", "@")
-            res.Add(new FormulaNode { Name = range.AddressLocal.Replace("$",""), Result = string.Format("{0:F2}", range.Value), Depth = "0", Type = "function" });
+            res.Add(new FormulaNode { Name = range.AddressLocal.Replace("$",""), Result = string.Format("{0:F2}", range.Value), Depth = 0, Type = "function" });
             string lettersFormula = range.FormulaLocal.Replace(" ", ""); // Замените на вашу строку с формулой
 
             // TODO:Ivanco:регулярки обьявляем так - Regex regex = new Regex(@"туп(\w*)"); 
@@ -171,7 +171,7 @@ namespace Excel_DNA
             else if (Regex.IsMatch(range.Formula, valuesFormulaPattern))
             {
                 range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
-                res.Add(new FormulaNode { Name = range.Text, Result = range.Text, Depth = "1" });
+                res.Add(new FormulaNode { Name = range.Text, Result = range.Text, Depth = 1 });
                 SendMessage("");
                 return;
             }
@@ -182,7 +182,7 @@ namespace Excel_DNA
                 range.Interior.Color = Color.Pink; // окрашиваем начальную ячейку в розовый
                 // TODO: Ivanco: сделать конструкторы для класса.
                 // инициализация через именованные параметры выглядит очень громоздко, здесь и по всему коду дальше.
-                res.Add(new FormulaNode { Name = range.FormulaLocal.Substring(1), Result = range.Text.Replace("#", "@"), Depth = "1" });
+                res.Add(new FormulaNode { Name = range.FormulaLocal.Substring(1), Result = range.Text.Replace("#", "@"), Depth = 1 });
                 SendMessage("");
                 return;
             }

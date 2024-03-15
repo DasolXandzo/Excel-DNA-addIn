@@ -10,8 +10,8 @@ namespace Excel_DNA
 {
     public class FormulaParserExcel
     {
-        public static List<FormulaNode> res = new List<FormulaNode>();
-        public static List<Cell> cells = new List<Cell>();
+        public List<FormulaNode> res = new List<FormulaNode>();
+        public List<Cell> cells = new List<Cell>();
         static ExcelApplicaton exApp;
         public FormulaParserExcel(ExcelApplicaton App)
         {
@@ -49,7 +49,7 @@ namespace Excel_DNA
             {
                 var name_node = root.Token.ValueString;
                 var result_node = RangeSet("=" + name_node);
-                res.Add(new FormulaNode { Name = name_node, Result = result_node.Item2, Depth = depth.ToString(), Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null) });
+                res.Add(new FormulaNode { Name = name_node, Result = result_node, Depth = depth, Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null) });
             }
             if (root.Term.Name == "CellToken")
             {
@@ -57,7 +57,7 @@ namespace Excel_DNA
                 {
                     var name_node = root.Print();
                     var result_node = RangeSet("=" + name_node);
-                    res.Add(new FormulaNode { Name = name_node, Result = result_node.Item2, Depth = depth.ToString(), Parent = parent });
+                    res.Add(new FormulaNode { Name = name_node, Result = result_node, Depth = depth, Parent = parent });
                     return;
                 }
                 var name = root.Token.Text;
@@ -67,13 +67,13 @@ namespace Excel_DNA
             if (root.Term.Name == "NumberToken")
             {
                 var name = root.Token.Text;
-                res.Add(new FormulaNode { Name = name, Depth = depth.ToString(), Result = name, Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null) });
+                res.Add(new FormulaNode { Name = name, Depth = depth, Result = root.Token.Value, Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null) });
                 return;
             }
             if (root.Term.Name == "ReferenceFunctionCall" && root.ChildNodes.Count() == 3)
             {
                 var name = root.Print();
-                res.Add(new FormulaNode { Name = name, Depth = depth.ToString(), Result = "<диапазон>", Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null) });
+                res.Add(new FormulaNode { Name = name, Depth = depth, Result = "<диапазон>", Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null) });
                 return;
             }
             if (root.IsUnaryOperation())
@@ -81,7 +81,7 @@ namespace Excel_DNA
                 var name = root.Print();
 
                 var result = RangeSet("=" + name);
-                name = result.Item1;
+                //name = result.Item1; //todo зачем перезаписывать? Такая же перезапись есть в нескольких местах ниже
                 //return;
                 if (root.ChildNodes[0].Term.Name == "-")
                 {
@@ -91,7 +91,7 @@ namespace Excel_DNA
                     }
                     else
                     {
-                        res.Add(new FormulaNode { Name = name, Depth = depth.ToString(), Result = result.Item2, Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null) });
+                        res.Add(new FormulaNode { Name = name, Depth = depth, Result = result, Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null) });
                         minus = true;
                         return;
                     }
@@ -105,16 +105,16 @@ namespace Excel_DNA
                     if (root.ChildNodes.Count == 3)
                     {
                         var bin_name = root.Print();
-                        Tuple<string, string> bin_result = RangeSet("=" + bin_name);
-                        bin_name = bin_result.Item1;
+                        var bin_result = RangeSet("=" + bin_name);
+                        //bin_name = bin_result.Item1;
 
                         var cell_args = new List<ParseTreeNode>();
 
                         res.Add(new FormulaNode
                         {
                             Name = bin_name,
-                            Depth = depth.ToString(),
-                            Result = bin_result.Item2,
+                            Depth = depth,
+                            Result = bin_result,
                             Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null),
                             Type = "function"
                         });
@@ -148,10 +148,10 @@ namespace Excel_DNA
 
                 var name = root.Print();
 
-                Tuple<string, string> result = RangeSet("=" + name);
-                name = result.Item1;
+                var result = RangeSet("=" + name);
+                //name = result.Item1;
 
-                res.Add(new FormulaNode { Name = name, Depth = depth.ToString(), Result = result.Item2, Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null), Type = "function" });
+                res.Add(new FormulaNode { Name = name, Depth = depth, Result = result, Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null), Type = "function" });
                 var stop = 5;
                 foreach (var child in root.ChildNodes)
                 {
@@ -164,7 +164,7 @@ namespace Excel_DNA
                 FormulaAnalyzer analyzer = new FormulaAnalyzer(root);
                 var name = root.Print();
                 var result = "range";
-                res.Add(new FormulaNode { Name = name, Depth = depth.ToString(), Result = result, Parent = parent });
+                res.Add(new FormulaNode { Name = name, Depth = depth, Result = result, Parent = parent });
                 return;
             }
             if (root.IsParentheses())
@@ -183,7 +183,7 @@ namespace Excel_DNA
                 }
                 else
                 {
-                    res.Add(new FormulaNode { Name = name, Depth = depth.ToString(), Result = result.Item2, Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null), Type = "function" });
+                    res.Add(new FormulaNode { Name = name, Depth = depth, Result = result, Parent = (depth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null), Type = "function" });
                 }
                 if (root.ChildNodes.Count == 1 && root.ChildNodes[0].IsParentheses()) //проверка внутри только скобки
                 {
@@ -204,32 +204,34 @@ namespace Excel_DNA
             }
         }
 
-        public static Tuple<string, string> RangeSet(string formula)
+        public static object RangeSet(string formula)
         {
-            //Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
             exApp.Range["BBB1000"].Formula = formula;
             Microsoft.Office.Interop.Excel.Range range = exApp.Range["BBB1000"];
             var value = exApp.Evaluate(formula);
-            var res = string.Format("{0:F2}", value);
-            return Tuple.Create(range.FormulaLocal.Substring(1), res);
+            return value;
         }
 
-        public static void CellSet(string cellName, int cellDepth, FormulaNode parent)
+        public void CellSet(string cellName, int cellDepth, FormulaNode parent)
         {
             Microsoft.Office.Interop.Excel.Application excelApp = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
             Microsoft.Office.Interop.Excel.Range range = excelApp.Range[cellName];
             if (range.Value == null)
             {
-                res.Add(new FormulaNode { Name = cellName, Depth = cellDepth.ToString(), Result = "<пусто>", Parent = (cellDepth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < cellDepth) : null) });
+                res.Add(new FormulaNode { Name = cellName, Depth = cellDepth, Result = "<пусто>", Parent = (cellDepth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < cellDepth) : null) });
                 return;
             }
-            else if (range.Value.GetType() == typeof(string))
+            if (range.Value is string)
             {
-                res.Add(new FormulaNode { Name = cellName, Depth = cellDepth.ToString(), Result = range.Text, Parent = (cellDepth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < cellDepth) : null) });
+                res.Add(new FormulaNode { Name = cellName, Depth = cellDepth, 
+                    Result = range.Text, //todo почему range.Text, а не range.Value?
+                    Parent = (cellDepth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < cellDepth) : null) });
                 return;
             }
             var result = range.Text.Replace("#", "@");
-            res.Add(new FormulaNode { Name = cellName, Depth = cellDepth.ToString(), Result = range.Text.Replace("#", "@"), Parent = (cellDepth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < cellDepth) : null) });
+            res.Add(new FormulaNode { Name = cellName, Depth = cellDepth, 
+                Result = range.Value, //todo тут было range.Text.Replace("#", "@"), зачем менять решетку на собачку? Из-за этого у FormulaNode, например, C5 в поле Result было строковое значение. При том, что у -C10 значение double
+                Parent = (cellDepth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < cellDepth) : null) });
             cells.Add(new Cell { Adress = cellName, Fun = result });
             return;
         }
@@ -280,7 +282,7 @@ namespace Excel_DNA
             }
             return true;
         }
-        private static void BinaryFunZero(ParseTreeNode root, ref List<ParseTreeNode> cell_args, int depht)
+        private void BinaryFunZero(ParseTreeNode root, ref List<ParseTreeNode> cell_args, int depht)
         {
             //var cell_args = new List<ParseTreeNode>();
             if (CheckIsBinary(root.ChildNodes[0]))
@@ -293,7 +295,7 @@ namespace Excel_DNA
                 if (!CheckIsSameSign(root, root.ChildNodes[0]))
                 {
                     var name = root.ChildNodes[0].Print();
-                    res.Add(new FormulaNode { Name = name, Parent = res.Last(), Depth = depht.ToString(), Result = "2" });
+                    res.Add(new FormulaNode { Name = name, Parent = res.Last(), Depth = depht, Result = "2" });
                 }
                 FormulaAnalyzer analyzer = new FormulaAnalyzer(root.ChildNodes[0]);
                 var cells = analyzer.AllNodes.Where(x => x.Term.ToString() == "Cell");
@@ -306,7 +308,7 @@ namespace Excel_DNA
                 }
             }
         }
-        private static void BinaryFunSecond(ParseTreeNode root, ref List<ParseTreeNode> cell_args, int depth)
+        private void BinaryFunSecond(ParseTreeNode root, ref List<ParseTreeNode> cell_args, int depth)
         {
             if (CheckIsBinary(root.ChildNodes[2]))
             {
@@ -318,7 +320,7 @@ namespace Excel_DNA
                 if (!CheckIsSameSign(root, root.ChildNodes[2]))
                 {
                     var name = root.ChildNodes[2].Print();
-                    res.Add(new FormulaNode { Name = name, Parent = res.Last(), Depth = depth.ToString(), Result = "2" });
+                    res.Add(new FormulaNode { Name = name, Parent = res.Last(), Depth = depth, Result = "2" });
                 }
                 if (CheckIsNoBinFun(root.ChildNodes[2]))
                 {
@@ -340,7 +342,7 @@ namespace Excel_DNA
                 ReferenceHandler = ReferenceHandler.IgnoreCycles,
                 WriteIndented = true
             };
-            var json = System.Text.Json.JsonSerializer.Serialize(res[0], options);
+            var json = JsonSerializer.Serialize(res[0], options);
             res.Clear();
             return json;
         }
