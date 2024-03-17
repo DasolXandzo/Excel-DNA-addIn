@@ -101,5 +101,25 @@ namespace ParseTests
                 }
             };
         }
+
+        /// <summary>
+        /// Сравнивает две ноды с учетом наследников. 
+        /// Отличается от стандартного Assert.Equal(expected, actual) тем, что сранивает только некоторые поля, но зато выводит более понятное сообщение при различиях
+        /// </summary>
+        /// <param name="expected"></param>
+        /// <param name="actual"></param>
+        private static void AssertFormulaNode(FormulaNode expected, FormulaNode actual)
+        {
+            Assert.Equal(expected.Name, actual.Name);
+            Assert.Equal(expected.Depth, actual.Depth);
+            Assert.Equal(expected.Type, actual.Type);
+            Assert.Equal(expected.Result, actual.Result);
+            
+            Assert.Equal(expected.Childrens.Count, actual.Childrens.Count);
+            for (var i = 0; i < expected.Childrens.Count; i++)
+            {
+                AssertFormulaNode(expected.Childrens[i], actual.Childrens[i]);
+            }
+        }
     }
 }
