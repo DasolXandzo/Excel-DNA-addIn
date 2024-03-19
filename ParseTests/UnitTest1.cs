@@ -49,13 +49,13 @@ namespace ParseTests
         {
             yield return new object[]
             {
-                "G2",
+                "G26",
                 new FormulaNode
                 {
-                    Depth = 1, Name = "A2+1", Result = 4d, Parent = null, Type = "function",
+                    Depth = 1, Name = "C26+1", Result = 4d, Parent = null, Type = "function",
                     Childrens = new List<FormulaNode>
                     {
-                        new() { Depth = 2, Name = "A2", Result = 3d, Parent = null, Type = null },
+                        new() { Depth = 2, Name = "C26", Result = 3d, Parent = null, Type = null },
                         new() { Depth = 2, Name = "1", Result = 1, Parent = null, Type = null }
                     }
                 }

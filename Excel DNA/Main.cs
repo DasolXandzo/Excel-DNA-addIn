@@ -132,7 +132,7 @@ namespace Excel_DNA
             Range range = exApp.ActiveCell;
 
             //range.Text.Replace("#", "@")
-            res.Add(new FormulaNode { Name = range.AddressLocal.Replace("$",""), Result = string.Format("{0:F2}", range.Value), Depth = 0, Type = "function" });
+            res.Add(new FormulaNode { Name = range.AddressLocal.Replace("$",""), Result = string.Format("{0:F2}", range.Value ?? string.Empty), Depth = 0, Type = "function" });
             string lettersFormula = range.FormulaLocal.Replace(" ", ""); // Замените на вашу строку с формулой
 
             // TODO:Ivanco:регулярки обьявляем так - Regex regex = new Regex(@"туп(\w*)"); 
@@ -197,22 +197,22 @@ namespace Excel_DNA
 
             ParseTreeNode node =  ExcelFormulaParser.Parse(range.Formula);
 
-            FormulaParserExcel parser = new FormulaParserExcel(exApp);
+            var parser = new FormulaParserExcel(exApp);
 
 
             parser.DepthFirstSearch(node, exApp, 1);
 
-            res.AddRange(parser.GetRes());
+            var nodes = parser.GetRes();
+            //res.AddRange(nodes);
+            //cells = parser.GetCells();
 
-            cells = parser.GetCells();
-
-            string json = parser.GetJson();
+            var json = FormulaParserExcel.GetJson(nodes[0]);
 
             SendMessage(json);
 
         }
 
-        public async static void SendMessage(string json)
+        public static async void SendMessage(string json)
         {
             try
             {
@@ -228,7 +228,6 @@ namespace Excel_DNA
 
             treeForm.Show();
         }
-
         
         public void AutoClose()
         {
