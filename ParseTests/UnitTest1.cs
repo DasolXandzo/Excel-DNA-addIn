@@ -47,16 +47,17 @@ namespace ParseTests
 
         public static IEnumerable<object[]> GetTestCases()
         {
+            
             yield return new object[]
             {
-                "G26",
+                "G4",
                 new FormulaNode
                 {
-                    Depth = 1, Name = "C26+1", Result = 4d, Parent = null, Type = "function",
+                    Depth = 1, Name = "-----1/3", Result = -0.33333333333333331d, Parent = null, Type = "function",
                     Childrens = new List<FormulaNode>
                     {
-                        new() { Depth = 2, Name = "C26", Result = 3d, Parent = null, Type = null },
-                        new() { Depth = 2, Name = "1", Result = 1, Parent = null, Type = null }
+                        new() { Depth = 2, Name = "-----1", Result = -1d, Parent = null, Type = null },
+                        new() { Depth = 2, Name = "3", Result = 3, Parent = null, Type = null }
                     }
                 }
             };
@@ -71,6 +72,20 @@ namespace ParseTests
                     {
                         new() { Depth = 2, Name = "-(-(-(-1)))", Result = 1d, Parent = null, Type = null },
                         new() { Depth = 2, Name = "C5", Result = 1d, Parent = null, Type = null }
+                    }
+                }
+            };
+            
+            yield return new object[]
+            {
+                "G6",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "1/0", Result = "error", Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "1", Result = 1, Parent = null, Type = null },
+                        new() { Depth = 2, Name = "0", Result = 0, Parent = null, Type = null }
                     }
                 }
             };
@@ -97,6 +112,20 @@ namespace ParseTests
                         }},
                         new() { Depth = 2, Name = "-C10", Result = -1d, Parent = null, Type = null },
                         new() { Depth = 2, Name = "-1", Result = -1d, Parent = null, Type = null },
+                    }
+                }
+            };
+            
+            yield return new object[]
+            {
+                "G26",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "C26+1", Result = 4d, Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "C26", Result = 3d, Parent = null, Type = null },
+                        new() { Depth = 2, Name = "1", Result = 1, Parent = null, Type = null }
                     }
                 }
             };

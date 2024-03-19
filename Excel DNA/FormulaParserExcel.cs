@@ -212,6 +212,8 @@ namespace Excel_DNA
             {
                 Debug.WriteLine($"{range.FormulaLocal.Substring(1)} != {formula.Substring(1)}");
             }
+            if (value == -2146826281) // #DIV/0!
+                return "error";
             return value;
         }
 
