@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json;
 using XLParser;
 using ExcelApplicaton = Microsoft.Office.Interop.Excel.Application;
+using System.Diagnostics;
 
 namespace Excel_DNA
 {
@@ -209,6 +210,10 @@ namespace Excel_DNA
             exApp.Range["BBB1000"].Formula = formula;
             Microsoft.Office.Interop.Excel.Range range = exApp.Range["BBB1000"];
             var value = exApp.Evaluate(formula);
+            if (range.FormulaLocal.Substring(1).ToString() != formula.Substring(1))
+            {
+                Debug.WriteLine($"{range.FormulaLocal.Substring(1)} != {formula.Substring(1)}");
+            }
             return value;
         }
 
@@ -224,13 +229,18 @@ namespace Excel_DNA
             if (range.Value is string)
             {
                 res.Add(new FormulaNode { Name = cellName, Depth = cellDepth, 
-                    Result = range.Text, //todo почему range.Text, а не range.Value?
+                    Result = range.Text, //todo подумать над тем, чтобы сохранять и range.Text и range.Value
                     Parent = (cellDepth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < cellDepth) : null) });
                 return;
             }
             var result = range.Text.Replace("#", "@");
+            //var result = range.Text;
+            if (result.ToString() != range.Text.ToString())
+            {
+                Debug.WriteLine($"{result.ToString()} != {range.Text.ToString()}");
+            }
             res.Add(new FormulaNode { Name = cellName, Depth = cellDepth, 
-                Result = range.Value, //todo тут было range.Text.Replace("#", "@"), зачем менять решетку на собачку? Из-за этого у FormulaNode, например, C5 в поле Result было строковое значение. При том, что у -C10 значение double
+                Result = range.Value, //todo тут было range.Text.Replace("#", "@"), найти случаи, когда это было нужно
                 Parent = (cellDepth >= 2 ? res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < cellDepth) : null) });
             cells.Add(new Cell { Adress = cellName, Fun = result });
             return;

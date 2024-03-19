@@ -12,6 +12,7 @@ using XLParser;
 using ExcelApplicaton = Microsoft.Office.Interop.Excel.Application;
 using Range = Microsoft.Office.Interop.Excel.Range;
 using IDnaRibbonControl = ExcelDna.Integration.CustomUI.IRibbonControl;
+using System.Diagnostics;
 
 namespace Excel_DNA
 {
@@ -33,7 +34,7 @@ namespace Excel_DNA
         public void AutoOpen()
         {
             connection = new HubConnectionBuilder()
-            .WithUrl("https://localhost:7108/chathub")
+            .WithUrl("https://localhost:7108/chat")
             .Build();
             connection.On<string, string>("Receive", async (message, username) =>
             {
@@ -183,6 +184,10 @@ namespace Excel_DNA
                 // TODO: Ivanco: сделать конструкторы для класса.
                 // инициализация через именованные параметры выглядит очень громоздко, здесь и по всему коду дальше.
                 res.Add(new FormulaNode { Name = range.FormulaLocal.Substring(1), Result = range.Text.Replace("#", "@"), Depth = 1 });
+                if (range.Text.ToString() != range.Text.Replace("#", "@").ToString())
+                {
+                    Debug.WriteLine($"{range.Text.ToString()} != {range.Text.Replace("#", "@").ToString()}");
+                }
                 SendMessage("");
                 return;
             }
