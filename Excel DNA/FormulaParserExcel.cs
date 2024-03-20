@@ -207,12 +207,21 @@ namespace Excel_DNA
         {
             _exApp.Range["BBB1000"].Formula = formula;
             Microsoft.Office.Interop.Excel.Range range = _exApp.Range["BBB1000"];
-            var value = _exApp.Evaluate(formula);
+            //var value = _exApp.Evaluate(formula); // не работает в случае формулы =INDIRECT(C7&D7)
+            var value = range.Value2;
             if (range.FormulaLocal.Substring(1).ToString() != formula.Substring(1))
             {
                 Debug.WriteLine($"{range.FormulaLocal.Substring(1)} != {formula.Substring(1)}");
             }
-            if (value == -2146826281) // #DIV/0!
+            //https://xldennis.wordpress.com/2006/11/22/dealing-with-cverr-values-in-net-%E2%80%93-part-i-the-problem/
+            //#NULL!       -2146826288
+            //#DIV/0!      -2146826281
+            //#VALUE!      -2146826273
+            //#REF!        -2146826265
+            //#NAME?       -2146826259
+            //#NUM!        -2146826252
+            //#N/A         -2146826246
+            if (value is int && (value == -2146826281 || value == -2146826273))
                 return "error";
             return value;
         }

@@ -75,7 +75,7 @@ namespace ParseTests
                     }
                 }
             };
-            
+
             yield return new object[]
             {
                 "G6",
@@ -89,7 +89,47 @@ namespace ParseTests
                     }
                 }
             };
-            
+
+            yield return new object[]
+            {
+                "G7",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "INDIRECT(C7&D7)", Result = 0d, Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "C7&D7", Result = "D5", Parent = null, Type = "function", Childrens = new List<FormulaNode>
+                        {
+                            new() { Depth = 3, Name = "C7", Result = "D", Parent = null, Type = null },
+                            new() { Depth = 3, Name = "D7", Result = 5d, Parent = null, Type = null }
+                        } }
+                    }
+                }
+            };
+
+            yield return new object[]
+            {
+                "G8",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "C8", Result = 3d, Parent = null, Type = null
+                }
+            };
+
+            yield return new object[]
+            {
+                "G9",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "C9+D9", Result = 3d, Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "C9", Result = 1d, Parent = null, Type = null },
+                        new() { Depth = 2, Name = "D9", Result = 2d, Parent = null, Type = null }
+                    }
+                }
+            };
+
             yield return new object[]
             {
                 "G10",
@@ -115,7 +155,123 @@ namespace ParseTests
                     }
                 }
             };
-            
+
+            yield return new object[]
+            {
+                "G11", // формула как G10, но с переносами строки
+                new FormulaNode
+                {
+                    Depth = 1, Name = "SUM(AVERAGE(C11:D11),SUM(C11:D11,AVERAGE(C11:D11)),-C11,-1)", Result = 4d, Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "AVERAGE(C11:D11)", Result = 1.5d, Parent = null, Type = "function", Childrens = new List<FormulaNode>
+                        {
+                            new() { Depth = 3, Name = "C11:D11", Result = "<диапазон>", Parent = null, Type = null }
+                        }},
+                        new() { Depth = 2, Name = "SUM(C11:D11,AVERAGE(C11:D11))", Result = 4.5d, Parent = null, Type = "function", Childrens = new List<FormulaNode>
+                        {
+                            new() { Depth = 3, Name = "C11:D11", Result = "<диапазон>", Parent = null, Type = null },
+                            new() { Depth = 3, Name = "AVERAGE(C11:D11)", Result = 1.5d, Parent = null, Type = "function", Childrens = new List<FormulaNode>
+                            {
+                                new() { Depth = 4, Name = "C11:D11", Result = "<диапазон>", Parent = null, Type = null }
+                            }}
+                        }},
+                        new() { Depth = 2, Name = "-C11", Result = -1d, Parent = null, Type = null },
+                        new() { Depth = 2, Name = "-1", Result = -1d, Parent = null, Type = null },
+                    }
+                }
+            };
+
+            yield return new object[]
+            {
+                "G12",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "AVERAGE(C12:D12)", Result = 1d, Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "C12:D12", Result = "<диапазон>", Parent = null, Type = null }
+                    }
+                }
+            };
+
+            yield return new object[]
+            {
+                "G13",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "AVERAGE(C13:D13)", Result = "error", Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "C13:D13", Result = "<диапазон>", Parent = null, Type = null }
+                    }
+                }
+            };
+
+            yield return new object[]
+            {
+                "G14",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "POWER(C14,D14)", Result = 0.7071067811865475d, Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "C14", Result = 2d, Parent = null, Type = null },
+                        new() { Depth = 2, Name = "D14", Result = -0.5d, Parent = null, Type = null }
+                    }
+                }
+            };
+
+            yield return new object[]
+            {
+                "G15",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "C15^D15", Result = 0.7071067811865475d, Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "C15", Result = 2d, Parent = null, Type = null },
+                        new() { Depth = 2, Name = "D15", Result = -0.5d, Parent = null, Type = null }
+                    }
+                }
+            };
+
+            yield return new object[]
+            {
+                "G16",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "OFFSET(G16,C16,D16)", Result = "Не выводит общий результат", Parent = null, Type = "function", //подозрительный результат
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "G16", Result = "Не выводит общий результат", Parent = null, Type = null },
+                        new() { Depth = 2, Name = "C16", Result = "<пусто>", Parent = null, Type = null },
+                        new() { Depth = 2, Name = "D16", Result = 2d, Parent = null, Type = null }
+                    }
+                }
+            };
+
+
+            yield return new object[]
+            {
+                "G17",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "SUM(OFFSET(C16,C17,D17,E17,F17))", Result = 3d, Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "OFFSET(C16,C17,D17,E17,F17)", Result = "error", Parent = null, Type = "function", Childrens = new List<FormulaNode>
+                        {
+                            new() { Depth = 3, Name = "C16", Result = "<пусто>", Parent = null, Type = null },
+                            new() { Depth = 3, Name = "C17", Result = 1d, Parent = null, Type = null },
+                            new() { Depth = 3, Name = "D17", Result = 2d, Parent = null, Type = null },
+                            new() { Depth = 3, Name = "E17", Result = 1d, Parent = null, Type = null },
+                            new() { Depth = 3, Name = "F17", Result = 2d, Parent = null, Type = null },
+                        }}
+                    }
+                }
+            };
+
             yield return new object[]
             {
                 "G26",
