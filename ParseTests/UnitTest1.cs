@@ -272,6 +272,117 @@ namespace ParseTests
                 }
             };
 
+
+            yield return new object[]
+            {
+                "G18",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "IF(C18>D18,IF(C18>E18,E18,F18),F18)", Result = 5d, Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "C18>D18", Result = true, Parent = null, Type = "function", Childrens = new List<FormulaNode>
+                        {
+                            new() { Depth = 3, Name = "C18", Result = 3d, Parent = null, Type = null },
+                            new() { Depth = 3, Name = "D18", Result = 2d, Parent = null, Type = null }
+                        }},
+                        new() { Depth = 2, Name = "IF(C18>E18,E18,F18)", Result = 5d, Parent = null, Type = "function", Childrens = new List<FormulaNode>
+                        {
+                            new() { Depth = 3, Name = "C18>E18", Result = false, Parent = null, Type = "function", Childrens = new List<FormulaNode>
+                            {
+                                new() { Depth = 4, Name = "C18", Result = 3d, Parent = null, Type = null },
+                                new() { Depth = 4, Name = "E18", Result = 4d, Parent = null, Type = null }
+                            } },
+                            new() { Depth = 3, Name = "E18", Result = 4d, Parent = null, Type = null },
+                            new() { Depth = 3, Name = "F18", Result = 5d, Parent = null, Type = null }
+                        }},
+                        new() { Depth = 2, Name = "F18", Result = 5d, Parent = null, Type = null }
+                    }
+                }
+            };
+
+
+            yield return new object[]
+            {
+                "G19",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "IF(C18>D18,IF(C18>E18,E18,F19),F19)", Result = "меньше", Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "C18>D18", Result = true, Parent = null, Type = "function", Childrens = new List<FormulaNode>
+                        {
+                            new() { Depth = 3, Name = "C18", Result = 3d, Parent = null, Type = null },
+                            new() { Depth = 3, Name = "D18", Result = 2d, Parent = null, Type = null }
+                        }},
+                        new() { Depth = 2, Name = "IF(C18>E18,E18,F19)", Result = "меньше", Parent = null, Type = "function", Childrens = new List<FormulaNode>
+                        {
+                            new() { Depth = 3, Name = "C18>E18", Result = false, Parent = null, Type = "function", Childrens = new List<FormulaNode>
+                            {
+                                new() { Depth = 4, Name = "C18", Result = 3d, Parent = null, Type = null },
+                                new() { Depth = 4, Name = "E18", Result = 4d, Parent = null, Type = null }
+                            } },
+                            new() { Depth = 3, Name = "E18", Result = 4d, Parent = null, Type = null },
+                            new() { Depth = 3, Name = "F19", Result = "меньше", Parent = null, Type = null }
+                        }},
+                        new() { Depth = 2, Name = "F19", Result = "меньше", Parent = null, Type = null }
+                    }
+                }
+            };
+
+            yield return new object[]
+            {
+                "G20",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "SUM(C17:E19)", Result = 13d, Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "C17:E19", Result = "<диапазон>", Parent = null, Type = null }
+                    }
+                }
+            };
+
+            yield return new object[]
+            {
+                "G21",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "IF(C21:D21>0,E21,F21)", Result = "<", Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "C21:D21>0", Result = "error", Parent = null, Type = "function", Childrens = new List<FormulaNode>
+                        {
+                            new() { Depth = 3, Name = "C21", Result = 3d, Parent = null, Type = null },
+                            new() { Depth = 3, Name = "D21", Result = 100d, Parent = null, Type = null }
+                        }},
+                        new() { Depth = 2, Name = "E21", Result = ">", Parent = null, Type = null },
+                        new() { Depth = 2, Name = "F21", Result = "<", Parent = null, Type = null }
+                    }
+                }
+            };
+
+            yield return new object[]
+            {
+                "G22",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "G8*G4/SUM(C22:D22)", Result = -0.33333333333333331d, Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "G8*G4", Result = -1d, Parent = null, Type = "function", Childrens = new List<FormulaNode>
+                        {
+                            new() { Depth = 3, Name = "G8", Result = 3d, Parent = null, Type = null },
+                            new() { Depth = 3, Name = "G4", Result = -0.33333333333333331d, Parent = null, Type = null }
+                        }},
+                        new() { Depth = 2, Name = "SUM(C22:D22)", Result = 3d, Parent = null, Type = "function", Childrens = new List<FormulaNode>
+                        {
+                            new() { Depth = 3, Name = "C22:D22", Result = "<диапазон>", Parent = null, Type = null }
+                        }}
+                    }
+                }
+            };
+
             yield return new object[]
             {
                 "G26",
