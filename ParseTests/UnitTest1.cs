@@ -7,15 +7,22 @@ using Moq;
 using Newtonsoft.Json;
 using System;
 using System.IO;
+using System.Text;
 using XLParser;
+using Xunit.Abstractions;
 using ExcelApplicaton = Microsoft.Office.Interop.Excel.Application;
 
 namespace ParseTests
 {
     public class ParseTests
     {
+        private readonly ITestOutputHelper _testOutputHelper;
         ExcelApplicaton excelApplicaton;
-        public ParseTests() {
+        private readonly JsonSerializer _jsonSerializer;
+
+        public ParseTests(ITestOutputHelper testOutputHelper) {
+            _testOutputHelper = testOutputHelper;
+            _jsonSerializer = JsonSerializer.Create(new JsonSerializerSettings{Formatting = Formatting.Indented, ReferenceLoopHandling = ReferenceLoopHandling.Ignore});
             excelApplicaton = new ExcelApplicaton();
             Workbook wb = excelApplicaton.Workbooks.Open(@"C:\Users\ivank\source\repos\Excel-DNA-addIn\ParseTests\bin\Debug\net6.0-windows\test_v2.xlsm");
             excelApplicaton = ExApp.GetInstance();
@@ -241,10 +248,10 @@ namespace ParseTests
                 "G16",
                 new FormulaNode
                 {
-                    Depth = 1, Name = "OFFSET(G16,C16,D16)", Result = "Не выводит общий результат", Parent = null, Type = "function", //подозрительный результат
+                    Depth = 1, Name = "OFFSET(G16,C16,D16)", Result = 0d, Parent = null, Type = "function", //подозрительный результат
                     Childrens = new List<FormulaNode>
                     {
-                        new() { Depth = 2, Name = "G16", Result = "Не выводит общий результат", Parent = null, Type = null },
+                        new() { Depth = 2, Name = "G16", Result = 0d, Parent = null, Type = null },
                         new() { Depth = 2, Name = "C16", Result = "<пусто>", Parent = null, Type = null },
                         new() { Depth = 2, Name = "D16", Result = 2d, Parent = null, Type = null }
                     }
@@ -351,10 +358,10 @@ namespace ParseTests
                     Depth = 1, Name = "IF(C21:D21>0,E21,F21)", Result = "<", Parent = null, Type = "function",
                     Childrens = new List<FormulaNode>
                     {
-                        new() { Depth = 2, Name = "C21:D21>0", Result = "error", Parent = null, Type = "function", Childrens = new List<FormulaNode>
+                        new() { Depth = 2, Name = "C21:D21>0", Result = false, Parent = null, Type = "function", Childrens = new List<FormulaNode>
                         {
-                            new() { Depth = 3, Name = "C21", Result = 3d, Parent = null, Type = null },
-                            new() { Depth = 3, Name = "D21", Result = 100d, Parent = null, Type = null }
+                            new() { Depth = 3, Name = "C21:D21", Result = "<диапазон>", Parent = null, Type = null },
+                            new() { Depth = 3, Name = "0", Result = 0, Parent = null, Type = null }
                         }},
                         new() { Depth = 2, Name = "E21", Result = ">", Parent = null, Type = null },
                         new() { Depth = 2, Name = "F21", Result = "<", Parent = null, Type = null }
@@ -385,6 +392,48 @@ namespace ParseTests
 
             yield return new object[]
             {
+                "G23",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "Три*2", Result = 6d, Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "Три", Result = 3d, Parent = null, Type = null },
+                        new() { Depth = 2, Name = "2", Result = 2, Parent = null, Type = null }
+                    }
+                }
+            };
+
+            yield return new object[]
+            {
+                "G24",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "стр20*2", Result = 26d, Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "стр20", Result = 13d, Parent = null, Type = null },
+                        new() { Depth = 2, Name = "2", Result = 2, Parent = null, Type = null }
+                    }
+                }
+            };
+
+            yield return new object[]
+            {
+                "G25",
+                new FormulaNode
+                {
+                    Depth = 1, Name = "discount(C25)", Result = 90d, Parent = null, Type = "function",
+                    Childrens = new List<FormulaNode>
+                    {
+                        new() { Depth = 2, Name = "discount", Result = "", Parent = null, Type = "functions" },
+                        new() { Depth = 2, Name = "C25", Result = 100, Parent = null, Type = null }
+                    }
+                }
+            };
+
+            yield return new object[]
+            {
                 "G26",
                 new FormulaNode
                 {
@@ -404,13 +453,27 @@ namespace ParseTests
         /// </summary>
         /// <param name="expected"></param>
         /// <param name="actual"></param>
-        private static void AssertFormulaNode(FormulaNode expected, FormulaNode actual)
+        private void AssertFormulaNode(FormulaNode expected, FormulaNode actual)
         {
+            var sb = new StringBuilder();
+            using (var jsonWriter = new StringWriter(sb))
+            {
+                _jsonSerializer.Serialize(jsonWriter, expected);
+                _testOutputHelper.WriteLine($"Expected:{Environment.NewLine}{sb}");
+            }
+
+            sb.Clear();
+            using (var jsonWriter = new StringWriter(sb))
+            {
+                _jsonSerializer.Serialize(jsonWriter, actual);
+                _testOutputHelper.WriteLine($"Actual:{Environment.NewLine}{sb}");
+            }
+
             Assert.Equal(expected.Name, actual.Name);
             Assert.Equal(expected.Depth, actual.Depth);
             Assert.Equal(expected.Type, actual.Type);
             Assert.Equal(expected.Result, actual.Result);
-            
+
             Assert.Equal(expected.Childrens.Count, actual.Childrens.Count);
             for (var i = 0; i < expected.Childrens.Count; i++)
             {
