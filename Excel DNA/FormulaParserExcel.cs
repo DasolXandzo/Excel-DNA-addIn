@@ -146,17 +146,17 @@ namespace Excel_DNA
                     return;
                 }
 
-                var name = root.Print();
+                    var name = root.Print();
 
-                var result = RangeSet("=" + name);
-                //name = result.Item1;
+                    var result = RangeSet("=" + name);
+                    //name = result.Item1;
 
-                _res.Add(new FormulaNode { Name = name, Depth = depth, Result = result, Parent = (depth >= 2 ? _res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null), Type = "function" });
-                foreach (var child in root.ChildNodes)
-                {
-                    DepthFirstSearch(child, application, depth + 1, false, parent = (depth >= 2 ? _res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) <= depth) : null));
-                }
-                return;
+                    _res.Add(new FormulaNode { Name = name, Depth = depth, Result = result, Parent = (depth >= 2 ? _res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) < depth) : null), Type = "function" });
+                    foreach (var child in root.ChildNodes)
+                    {
+                        DepthFirstSearch(child, application, depth + 1, false, parent = (depth >= 2 ? _res.Last(x => x.Type == "function" && Convert.ToInt32(x.Depth) <= depth) : null));
+                    }
+                    return;
             }
             if (root.IsRange())
             {
@@ -363,6 +363,68 @@ namespace Excel_DNA
             };
             var json = JsonSerializer.Serialize(node, options);
             return json;
+        }
+
+        public static FormulaNode? Parse(ParseTreeNode node, FormulaNode? parent = null)
+        {
+            if (node.Term.GetType() == typeof(KeyTerm)) //Возможно, будет лучше использовать if (node.Term is Terminal)
+                //return new FormulaNode { Name = node.Print(), Type = "Operator", Depth = (parent?.Depth ?? 0) + 1, Result = node.Token.ValueString};
+                return null;
+            
+            FormulaNode formulaNode;
+            switch (node.Term.Name)
+            {
+                case GrammarNames.FunctionName: //ссылка на функцию
+                case GrammarNames.RefFunctionName: //ссылка на функцию
+                case GrammarNames.TokenUDF: //ссылка на пользовательсюку функцию
+                    //как отдельную ноду выводить не надо
+                    return null;
+                case GrammarNames.Constant:
+                    return new FormulaNode { Name = node.Print(), Type = "Constant", Depth = (parent?.Depth ?? 0) + 1, Result = node.Print()};
+                case GrammarNames.FormulaWithEq:
+                    return Parse(node.ChildNodes[1], parent);
+                case GrammarNames.Arguments:
+                    //Нода Arguments - фиктивная, она только группирует дочерние Argument
+                    //Так как аргументов может быть много, а возвращать мы можем только одну, то делаем финт - добавляем аргурменты сразу к родителю, и возвращаем null
+                    parent?.Childrens.AddRange(node.ChildNodes.Select(x => Parse(x, parent)).Where(x => x != null).Select(x => x!));
+                    return null;
+                case GrammarNames.Formula:
+                case GrammarNames.Reference:
+                case GrammarNames.Cell:
+                case GrammarNames.Argument:
+                case GrammarNames.NamedRange:
+                case GrammarNames.UDFName:
+                    return Parse(node.ChildNodes[0], parent);
+                case GrammarNames.ReferenceFunctionCall:
+                case GrammarNames.FunctionCall:
+                case GrammarNames.UDFunctionCall:
+                    if (node.IsBinaryOperation())
+                    {
+                        if (node.IsRange())
+                            return new FormulaNode { Name = node.Print(), Type = "Range", Depth = (parent?.Depth ?? 0) + 1 };
+                        
+                        formulaNode = new FormulaNode { Name = node.Print(), Type = "Expression", Depth = (parent?.Depth ?? 0) + 1 };
+                        formulaNode.Childrens.AddRange(node.ChildNodes.Select(x => Parse(x, formulaNode)).Where(x => x != null).Select(x => x!));
+                        return formulaNode;
+                    }
+
+                    if (node.IsNamedFunction())
+                    {
+                        formulaNode = new FormulaNode { Name = node.Print(), Type = "Function", Depth = (parent?.Depth ?? 0) + 1 };
+                        formulaNode.Childrens.AddRange(node.ChildNodes.Select(x => Parse(x, formulaNode)).Where(x => x != null).Select(x => x!));
+                        return formulaNode;
+                    }
+                    //TODO IsUnion и IsUnaryOperation
+                    return new FormulaNode { Name = node.Print(), Type = "Skip3", Depth = (parent?.Depth ?? 0) + 1 };
+                case GrammarNames.TokenCell:
+                    formulaNode = new FormulaNode{Name = node.Token.Text, Type = "CellLink", Depth = (parent?.Depth ?? 0) + 1};
+                    return formulaNode;
+                case GrammarNames.TokenName:
+                    return new FormulaNode { Name = node.Token.Text, Type = "NamedRangeLink", Depth = (parent?.Depth ?? 0) + 1 };
+                    
+                default:
+                    throw new ApplicationException($"Unknown term {node.Term.Name}");
+            }
         }
     }
 }
