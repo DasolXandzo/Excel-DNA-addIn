@@ -385,7 +385,7 @@ namespace Excel_DNA
                     return Parse(node.ChildNodes[1], parent);
                 case GrammarNames.Arguments:
                     //Нода Arguments - фиктивная, она только группирует дочерние Argument
-                    //Так как аргументов может быть много, а возвращать мы можем только одну, то делаем финт - добавляем аргурменты сразу к родителю, и возвращаем null
+                    //Так как аргументов может быть много, а возвращать мы можем только одну ноду, то делаем финт - добавляем аргурменты сразу к родителю, и возвращаем null
                     parent?.Childrens.AddRange(node.ChildNodes.Select(x => Parse(x, parent)).Where(x => x != null).Select(x => x!));
                     return null;
                 case GrammarNames.Formula:
@@ -414,8 +414,12 @@ namespace Excel_DNA
                         formulaNode.Childrens.AddRange(node.ChildNodes.Select(x => Parse(x, formulaNode)).Where(x => x != null).Select(x => x!));
                         return formulaNode;
                     }
-                    //TODO IsUnion и IsUnaryOperation
-                    return new FormulaNode { Name = node.Print(), Type = "Skip3", Depth = (parent?.Depth ?? 0) + 1 };
+                    if (node.IsUnaryOperation())
+                    {   //бывают вида -1, и бывают вида -C10. Возможно, их стоит отличать
+                        return new FormulaNode { Name = node.Print(), Type = "UnaryOperation", Depth = (parent?.Depth ?? 0) + 1 };
+                    }
+                    //TODO IsUnion
+                    return new FormulaNode { Name = node.Print(), Type = "Union?", Depth = (parent?.Depth ?? 0) + 1 };
                 case GrammarNames.TokenCell:
                     formulaNode = new FormulaNode{Name = node.Token.Text, Type = "CellLink", Depth = (parent?.Depth ?? 0) + 1};
                     return formulaNode;

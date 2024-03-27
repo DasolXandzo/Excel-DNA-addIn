@@ -12,6 +12,7 @@ using XLParser;
 using ExcelApplicaton = Microsoft.Office.Interop.Excel.Application;
 using Range = Microsoft.Office.Interop.Excel.Range;
 using IDnaRibbonControl = ExcelDna.Integration.CustomUI.IRibbonControl;
+using System.Xml.Linq;
 using System.Diagnostics;
 
 namespace Excel_DNA
@@ -26,7 +27,8 @@ namespace Excel_DNA
         static HubConnection connection;
 
         static ExcelApplicaton exApp = ExApp.GetInstance();
-        static MyForm treeForm = new MyForm($"http://localhost:3000/CreateTreePage/?userName={exApp.UserName}");
+        //static MyForm treeForm = new MyForm($"http://localhost:3000/CreateTreePage/?userName={exApp.UserName}");
+        static MyForm treeForm = new MyForm();
 
 
         static bool minus = true;
@@ -34,7 +36,7 @@ namespace Excel_DNA
         public void AutoOpen()
         {
             connection = new HubConnectionBuilder()
-            .WithUrl("https://localhost:7108/chat")
+            .WithUrl("https://localhost:7108/chathub")
             .Build();
             connection.On<string, string>("Receive", async (message, username) =>
             {
@@ -72,9 +74,9 @@ namespace Excel_DNA
 
         public void errorFormButtonPressed(IDnaRibbonControl control)
         {
-            var url = "http://localhost:3000/ErrorFormPage";
-            MyForm errorForm = new MyForm(url);
-            errorForm.Show();
+            // var url = "http://localhost:3000/ErrorFormPage";
+            // MyForm errorForm = new MyForm(url);
+            // errorForm.Show();
         }
 
         // ShortCut for call help window
@@ -108,15 +110,47 @@ namespace Excel_DNA
         }
         public void createTreeButtonPressed(IDnaRibbonControl control)
         {
-            RangeGet();
+            //RangeGet();
+
+            var exApp = ExApp.GetInstance();
+            var activeCell = exApp.ActiveCell;
+            var formula = activeCell.Formula;
+
+            var node = ExcelFormulaParser.Parse(formula);
+            var tree = FormulaParserExcel.Parse(node);
+
+            FillValues(tree, exApp);
+
+            treeForm.Show(tree);
+
         }
 
-        // ShortCut for call tree creator
-        [ExcelCommand(ShortCut = "^Q")]
-        public static void CallShortCutTree()
+        private void FillValues(FormulaNode node, ExcelApplicaton exApp)
         {
-            RangeGet();
+            switch (node.Type)
+            {
+                case "Expression":
+                case "Function":
+                case "UnaryOperation":
+                    node.Result = ExApp.GetValue(node.Name);
+                    break;
+                case "CellLink":
+                    node.Result = ExApp.ReadCellValue(node.Name);
+                    break;
+                case "Range":
+                    node.Result = "<диапазон>";
+                    break;
+                default:
+                    Debug.WriteLine($"FillValues: skip node type {node.Type}");
+                    break;
+            }
+
+            foreach (var item in node.Childrens)
+            {
+                FillValues(item, exApp);
+            }
         }
+
         // ShortCut for hide tree
         [ExcelCommand(ShortCut = "{ESC}")]
         public static void HideShortCutTree()
@@ -132,7 +166,7 @@ namespace Excel_DNA
             Range range = exApp.ActiveCell;
 
             //range.Text.Replace("#", "@")
-            res.Add(new FormulaNode { Name = range.AddressLocal.Replace("$",""), Result = string.Format("{0:F2}", range.Value ?? string.Empty), Depth = 0, Type = "function" });
+            res.Add(new FormulaNode { Name = range.AddressLocal.Replace("$",""), Result = string.Format("{0:F2}", range.Value), Depth = 0, Type = "function" });
             string lettersFormula = range.FormulaLocal.Replace(" ", ""); // Замените на вашу строку с формулой
 
             // TODO:Ivanco:регулярки обьявляем так - Regex regex = new Regex(@"туп(\w*)"); 
@@ -184,10 +218,6 @@ namespace Excel_DNA
                 // TODO: Ivanco: сделать конструкторы для класса.
                 // инициализация через именованные параметры выглядит очень громоздко, здесь и по всему коду дальше.
                 res.Add(new FormulaNode { Name = range.FormulaLocal.Substring(1), Result = range.Text.Replace("#", "@"), Depth = 1 });
-                if (range.Text.ToString() != range.Text.Replace("#", "@").ToString())
-                {
-                    Debug.WriteLine($"{range.Text.ToString()} != {range.Text.Replace("#", "@").ToString()}");
-                }
                 SendMessage("");
                 return;
             }
@@ -197,22 +227,24 @@ namespace Excel_DNA
 
             ParseTreeNode node =  ExcelFormulaParser.Parse(range.Formula);
 
-            var parser = new FormulaParserExcel(exApp);
+            FormulaParserExcel parser = new FormulaParserExcel(exApp);
 
 
             parser.DepthFirstSearch(node, exApp, 1);
 
-            var nodes = parser.GetRes();
-            //res.AddRange(nodes);
-            //cells = parser.GetCells();
-
-            var json = FormulaParserExcel.GetJson(nodes[0]);
-
-            SendMessage(json);
+            var formulaNodes = parser.GetRes();
+            // res.AddRange(formulaNodes);
+            //
+            // cells = parser.GetCells();
+            //
+            // string json = parser.GetJson();
+            //
+            // SendMessage(json);
+            treeForm.Show(formulaNodes[0]);
 
         }
 
-        public static async void SendMessage(string json)
+        public async static void SendMessage(string json)
         {
             try
             {
@@ -228,6 +260,7 @@ namespace Excel_DNA
 
             treeForm.Show();
         }
+
         
         public void AutoClose()
         {

@@ -282,7 +282,7 @@ namespace ParseTests
                     Depth = 1, Name = "SUM(OFFSET(C16,C17,D17,E17,F17))", Result = 3d, Parent = null, Type = "function",
                     Childrens = new List<FormulaNode>
                     {
-                        new() { Depth = 2, Name = "OFFSET(C16,C17,D17,E17,F17)", Result = "error", Parent = null, Type = "function", Childrens = new List<FormulaNode>
+                        new() { Depth = 2, Name = "OFFSET(C16,C17,D17,E17,F17)", Result = "error", Parent = null, Type = "function", Childrens = new List<FormulaNode> //TODO тут вроде как Result должно быть равно 3d
                         {
                             new() { Depth = 3, Name = "C16", Result = "<пусто>", Parent = null, Type = null },
                             new() { Depth = 3, Name = "C17", Result = 1d, Parent = null, Type = null },

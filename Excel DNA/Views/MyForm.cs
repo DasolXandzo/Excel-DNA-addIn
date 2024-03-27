@@ -1,15 +1,31 @@
 ﻿using ExcelDna.Integration;
 using Microsoft.Web.WebView2.Core;
+using static System.Windows.Forms.Design.AxImporter;
+using System.Text.Json.Serialization;
+using System.Text.Json;
+using Excel_DNA.Models;
 
 
 namespace Excel_DNA
 {
     public partial class MyForm : Form
     {
-        public MyForm(string url)
+        private readonly JsonSerializerOptions _options;
+
+        public MyForm()
         {
             TopMost = true;
             InitializeComponent();
+            _options = new JsonSerializerOptions
+            {
+                IncludeFields = true,
+                ReferenceHandler = ReferenceHandler.IgnoreCycles,
+                WriteIndented = true
+            };
+        }
+
+        public MyForm(string url) : this()
+        {
             var test = InitAsync(url);
         }
 
@@ -69,6 +85,12 @@ namespace Excel_DNA
             if(e.KeyCode== Keys.Escape) {
                 this.Hide();
             }
+        }
+
+        public void Show(FormulaNode node)
+        {
+            textBox1.Lines = new[] { JsonSerializer.Serialize(node, _options) };
+            Show();
         }
     }
 }
